@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chess</title>
+  <title>Leah's Chess – Built by Justin Song</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -408,18 +408,72 @@
       .player-panel { width: 140px; }
       .timer { font-size: 22px; }
     }
+
+    /* Ready button */
+    .btn-ready {
+      background: #22c55e;
+      color: #fff;
+      font-weight: 700;
+      width: 100%;
+      font-size: 13px;
+    }
+    .btn-ready:hover:not(:disabled) { background: #16a34a; }
+    .btn-ready.is-ready { background: transparent; border: 1px solid #22c55e; color: #22c55e; cursor: default; }
+    .btn-ready:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Chat panel */
+    .chat-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      max-width: calc(var(--sq-size) * 8 + var(--rank-w) + 4px);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .chat-messages {
+      height: 100px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .chat-msg .chat-name { font-weight: 700; }
+    .white-name { color: #d4b896; }
+    .black-name { color: #b58863; }
+    .chat-input-row { display: flex; gap: 6px; }
+    .chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    .chat-input:focus { outline: none; border-color: var(--accent); }
   </style>
 </head>
 <body>
 
-<h1>♟ <span>Chess</span></h1>
+<h1>♟ <span>Leah's Chess</span> <small style="font-size:12px;font-weight:400;color:var(--text-dim);margin-left:6px;">Built by Justin Song</small></h1>
 
 <div class="game-wrap">
 
   <!-- Black player -->
   <div class="player-panel" id="panel-black">
     <div class="player-label">Black ■</div>
-    <input class="player-name-input" id="name-black" value="Daughter" />
+    <input class="player-name-input" id="name-black" value="Daughter" oninput="onNameChange('black')" />
     <div class="timer black-timer" id="timer-black">10:00</div>
     <div class="player-timer-config">
       ⏱
@@ -448,6 +502,7 @@
     </div>
     <div class="captured-pieces" id="cap-black"></div>
     <div class="hint-badge-row">💡 <span class="hint-count" id="hint-badge-black">3</span> hints left</div>
+    <button class="btn-ready" id="btn-ready-black" onclick="toggleReady('black')">⏵ Ready</button>
   </div>
 
   <!-- Board -->
@@ -534,12 +589,22 @@
       <div class="hint-move-row">Best move: <strong id="hint-move-text">—</strong></div>
       <div class="hint-explain" id="hint-explain"></div>
     </div>
+
+    <div class="chat-panel">
+      <div class="chat-header">💬 Chat</div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input id="chat-input" class="chat-input" placeholder="Type a message..."
+          maxlength="200" onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="btn-outline" onclick="sendChat()">Send</button>
+      </div>
+    </div>
   </div>
 
   <!-- White player -->
   <div class="player-panel" id="panel-white">
     <div class="player-label">White □</div>
-    <input class="player-name-input" id="name-white" value="Dad" />
+    <input class="player-name-input" id="name-white" value="Dad" oninput="onNameChange('white')" />
     <div class="timer white-timer" id="timer-white">10:00</div>
     <div class="player-timer-config">
       ⏱
@@ -568,6 +633,7 @@
     </div>
     <div class="captured-pieces" id="cap-white"></div>
     <div class="hint-badge-row">💡 <span class="hint-count" id="hint-badge-white">3</span> hints left</div>
+    <button class="btn-ready" id="btn-ready-white" onclick="toggleReady('white')">⏵ Ready</button>
   </div>
 
 </div>
@@ -603,6 +669,9 @@
   let hintsUsedWhite = 0;
   let hintsUsedBlack = 0;
 
+  // Ready state
+  let readyWhite = false, readyBlack = false;
+
   // ---- Init ----
   function newGame() {
     if (mpMode) {
@@ -634,6 +703,8 @@
     hintLimit = parseInt(document.getElementById('hint-limit-select').value);
     hintsUsedWhite = 0;
     hintsUsedBlack = 0;
+    readyWhite = false;
+    readyBlack = false;
 
     document.getElementById('btn-undo').disabled = false;
     document.getElementById('btn-surrender').disabled = false;
@@ -645,6 +716,7 @@
     renderTimers();
     updateStatus();
     updateHintBadges();
+    updateReadyButtons();
     updateBackground();
   }
 
@@ -849,6 +921,7 @@
   // ---- Click handler ----
   function onSquareClick(sqName) {
     if (gameOver) return;
+    if (!readyWhite || !readyBlack) return;
     if (mpMode) {
       const myTurn = (mpColor === 'white' && game.turn() === 'w') ||
                      (mpColor === 'black' && game.turn() === 'b');
@@ -917,6 +990,12 @@
 
   // ---- Status ----
   function updateStatus() {
+    if (!readyWhite || !readyBlack) {
+      const wMark = readyWhite ? '✓' : '⏵';
+      const bMark = readyBlack ? '✓' : '⏵';
+      setStatus(`Waiting — White ${wMark}  Black ${bMark}  · click Ready to start`);
+      return;
+    }
     if (game.in_checkmate()) {
       const winner = game.turn() === 'w'
         ? document.getElementById('name-black').value
@@ -1017,6 +1096,78 @@
     const used = isWhite ? hintsUsedWhite : hintsUsedBlack;
     document.getElementById('btn-hint').disabled =
       gameOver || (!unlimited && used >= hintLimit);
+  }
+
+  // ---- Ready / Start ----
+  function toggleReady(color) {
+    if (gameOver) return;
+    if (mpMode && color !== mpColor) return; // in multiplayer, only click your own
+    if (color === 'white') readyWhite = true;
+    else readyBlack = true;
+    updateReadyButtons();
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      mpSocket.send(JSON.stringify({ type: 'ready', color }));
+    }
+    updateStatus();
+  }
+
+  function updateReadyButtons() {
+    const wBtn = document.getElementById('btn-ready-white');
+    const bBtn = document.getElementById('btn-ready-black');
+    if (wBtn) {
+      wBtn.textContent = readyWhite ? '✓ Ready!' : '⏵ Ready';
+      wBtn.classList.toggle('is-ready', readyWhite);
+      const canW = !readyWhite && !gameOver && (!mpMode || mpColor === 'white');
+      wBtn.disabled = !canW;
+    }
+    if (bBtn) {
+      bBtn.textContent = readyBlack ? '✓ Ready!' : '⏵ Ready';
+      bBtn.classList.toggle('is-ready', readyBlack);
+      const canB = !readyBlack && !gameOver && (!mpMode || mpColor === 'black');
+      bBtn.disabled = !canB;
+    }
+  }
+
+  // ---- Chat ----
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    let color, name;
+    if (mpMode) {
+      color = mpColor;
+      name = document.getElementById('name-' + mpColor).value;
+    } else {
+      color = game.turn() === 'w' ? 'white' : 'black';
+      name = document.getElementById('name-' + color).value;
+    }
+    input.value = '';
+    addChatMessage(color, name, msg);
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      mpSocket.send(JSON.stringify({ type: 'chat', color, name, msg }));
+    }
+  }
+
+  function addChatMessage(color, name, msg) {
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'chat-name ' + color + '-name';
+    nameSpan.textContent = name + ': ';
+    div.appendChild(nameSpan);
+    div.appendChild(document.createTextNode(msg));
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    while (el.children.length > 100) el.removeChild(el.firstChild);
+  }
+
+  // ---- Name sync ----
+  function onNameChange(color) {
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      const name = document.getElementById('name-' + color).value;
+      mpSocket.send(JSON.stringify({ type: 'name', color, name }));
+    }
   }
 
   // ---- Stockfish Hint (runs in browser via Web Worker — no API key needed) ----
@@ -1128,6 +1279,9 @@
     mpSocket.onopen = () => {
       document.getElementById('mp-code-display').textContent = mpRoomId;
       document.getElementById('mp-code-row').style.display = mpColor === 'white' ? 'flex' : 'none';
+      // Lock opponent's name — only you edit your own
+      const opColor = mpColor === 'white' ? 'black' : 'white';
+      document.getElementById('name-' + opColor).disabled = true;
     };
 
     mpSocket.onmessage = (evt) => {
@@ -1147,6 +1301,8 @@
         timeWhite = totalSecsW; timeBlack = totalSecsB;
         hintLimit = parseInt(document.getElementById('hint-limit-select').value);
         hintsUsedWhite = 0; hintsUsedBlack = 0;
+        readyWhite = false; readyBlack = false;
+        updateReadyButtons();
         document.getElementById('btn-undo').disabled = true;
         document.getElementById('btn-surrender').disabled = false;
         document.getElementById('btn-pause').textContent = '⏸ Pause';
@@ -1177,10 +1333,24 @@
 
       } else if (d.type === 'error') {
         setMpStatus('Error: ' + d.msg);
+      } else if (d.type === 'chat') {
+        addChatMessage(d.color, d.name, d.msg);
+      } else if (d.type === 'ready') {
+        if (d.color === 'white') readyWhite = true;
+        else readyBlack = true;
+        updateReadyButtons();
+        updateStatus();
+      } else if (d.type === 'name') {
+        document.getElementById('name-' + d.color).value = d.name;
       }
     };
 
-    mpSocket.onclose = () => { if (mpMode) setMpStatus('Disconnected'); mpMode = false; };
+    mpSocket.onclose = () => {
+      if (mpMode) setMpStatus('Disconnected');
+      mpMode = false;
+      document.getElementById('name-white').disabled = false;
+      document.getElementById('name-black').disabled = false;
+    };
     mpSocket.onerror = () => setMpStatus('Connection error — is the server running?');
   }
 
