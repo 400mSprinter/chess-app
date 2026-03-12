@@ -1019,14 +1019,43 @@
       gameOver || (!unlimited && used >= hintLimit);
   }
 
+  // ---- Stockfish Hint (runs in browser via Web Worker — no API key needed) ----
+  const SF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+  let _sfWorker = null, _sfReady = false;
+
+  async function getStockfish() {
+    if (_sfWorker && _sfReady) return _sfWorker;
+    if (_sfWorker) { _sfWorker.terminate(); _sfWorker = null; _sfReady = false; }
+    const code = await fetch(SF_CDN).then(r => r.text());
+    _sfWorker = new Worker(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
+    await new Promise(res => {
+      _sfWorker.onmessage = e => { if (e.data === 'uciok') res(); };
+      _sfWorker.postMessage('uci');
+    });
+    await new Promise(res => {
+      _sfWorker.onmessage = e => { if (e.data === 'readyok') res(); };
+      _sfWorker.postMessage('isready');
+    });
+    _sfReady = true;
+    return _sfWorker;
+  }
+
+  function askStockfish(fen, depth) {
+    return getStockfish().then(sf => new Promise(res => {
+      sf.onmessage = e => { if (e.data.startsWith('bestmove')) res(e.data.split(' ')[1] || null); };
+      sf.postMessage('ucinewgame');
+      sf.postMessage('position fen ' + fen);
+      sf.postMessage('go depth ' + depth);
+    }));
+  }
+
   async function requestHint() {
     if (gameOver) return;
     const isWhite = game.turn() === 'w';
     const used = isWhite ? hintsUsedWhite : hintsUsedBlack;
     if (hintLimit !== 0 && used >= hintLimit) return;
 
-    if (isWhite) hintsUsedWhite++;
-    else hintsUsedBlack++;
+    if (isWhite) hintsUsedWhite++; else hintsUsedBlack++;
     updateHintBadges();
 
     const playerName = isWhite
@@ -1034,35 +1063,35 @@
       : document.getElementById('name-black').value;
     document.getElementById('hint-for-name').textContent = playerName;
     document.getElementById('hint-move-text').textContent = '...';
-    document.getElementById('hint-explain').textContent = 'Let me think... 🤔';
+    document.getElementById('hint-explain').textContent = 'Stockfish is thinking... ♟';
     document.getElementById('hint-panel').style.display = 'block';
-
+    document.getElementById('btn-hint').disabled = true;
     hintHighlight = null;
     renderBoard();
-    document.getElementById('btn-hint').disabled = true;
 
     try {
-      const resp = await fetch('/api/chess/hint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fen: game.fen() }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ detail: 'Server error' }));
-        throw new Error(err.detail || `HTTP ${resp.status}`);
+      const fen = game.fen();
+      const bm = await askStockfish(fen, 15);
+      if (!bm || bm === '(none)') throw new Error('No legal moves');
+      const from = bm.slice(0, 2), to = bm.slice(2, 4), promo = bm.slice(4) || null;
+      const PNAMES = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
+      const piece = game.get(from);
+      const gameCopy = new Chess(fen);
+      const result = gameCopy.move({ from, to, promotion: promo || 'q' });
+      let explain = (piece ? PNAMES[piece.type] : '?') + ' ' + from + ' → ' + to;
+      if (result) {
+        if (result.captured) explain += '  (captures ' + (PNAMES[result.captured] || result.captured) + ')';
+        if (promo) explain += '  → promotes to ' + (PNAMES[promo] || promo);
+        if (gameCopy.in_checkmate()) explain += '  — Checkmate!';
+        else if (gameCopy.in_check()) explain += '  — Gives check!';
       }
-      const data = await resp.json();
-      document.getElementById('hint-move-text').textContent = data.move || '?';
-      document.getElementById('hint-explain').textContent =
-        data.explanation || 'No explanation available.';
-      if (data.from && data.to) {
-        hintHighlight = { from: data.from, to: data.to };
-        renderBoard();
-      }
+      document.getElementById('hint-move-text').textContent = result ? result.san : from + '-' + to;
+      document.getElementById('hint-explain').textContent = explain;
+      hintHighlight = { from, to };
+      renderBoard();
     } catch (e) {
       document.getElementById('hint-move-text').textContent = '—';
-      document.getElementById('hint-explain').textContent =
-        `😕 Couldn't get hint: ${e.message}`;
+      document.getElementById('hint-explain').textContent = '😕 Could not get hint: ' + e.message;
     } finally {
       updateHintBadges();
     }
