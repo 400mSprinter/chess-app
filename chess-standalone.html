@@ -400,6 +400,166 @@
     .mp-code { font-size: 24px; font-weight: 700; color: var(--accent); letter-spacing: 0.18em; }
     .mp-status { margin-top: 8px; font-size: 13px; color: var(--text-dim); min-height: 18px; }
 
+    /* Capture notification toast */
+    .capture-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--surface);
+      border: 2px solid #ef4444;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .capture-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .capture-toast .toast-icon { font-size: 22px; margin-right: 8px; }
+
+    /* Extra time request toast */
+    .time-request-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--surface);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 1001;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .time-request-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .time-request-toast .toast-btns { display: flex; gap: 8px; justify-content: center; }
+    .time-request-toast .btn-grant { background: #22c55e; color: #fff; font-weight: 700; padding: 6px 18px; }
+    .time-request-toast .btn-grant:hover { background: #16a34a; }
+    .time-request-toast .btn-deny { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 18px; }
+    .time-request-toast .btn-deny:hover { background: rgba(239,68,68,0.12); }
+
+    /* Hint used notification */
+    .hint-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--surface);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #f59e0b;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .hint-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Check notification toast */
+    .check-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--surface);
+      border: 2px solid #ef4444;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #ef4444;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .check-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Undo request toast */
+    .undo-request-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--surface);
+      border: 2px solid #8b5cf6;
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 1002;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .undo-request-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .undo-request-toast .toast-btns { display: flex; gap: 8px; justify-content: center; }
+    .undo-request-toast .btn-grant { background: #22c55e; color: #fff; font-weight: 700; padding: 6px 18px; }
+    .undo-request-toast .btn-grant:hover { background: #16a34a; }
+    .undo-request-toast .btn-deny { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 18px; }
+    .undo-request-toast .btn-deny:hover { background: rgba(239,68,68,0.12); }
+
+    /* Extra time button */
+    .btn-extra-time {
+      background: transparent;
+      border: 1px solid #f59e0b;
+      color: #f59e0b;
+      font-size: 11px;
+      padding: 4px 10px;
+      width: 100%;
+    }
+    .btn-extra-time:hover:not(:disabled) { background: rgba(245,158,11,0.12); }
+    .btn-extra-time:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Flip board button */
+    .btn-flip { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-flip:hover { background: var(--surface2); }
+
+    /* Disabled config look */
+    .player-timer-config.locked select { opacity: 0.4; pointer-events: none; }
+    .game-config.locked select { opacity: 0.4; pointer-events: none; }
+
     @media (max-width: 1100px) {
       .board-wrap { order: -1; }
     }
@@ -468,6 +628,12 @@
 
 <h1>♟ <span>Leah's Chess</span> <small style="font-size:12px;font-weight:400;color:var(--text-dim);margin-left:6px;">Built by Justin Song</small></h1>
 
+<div id="capture-toast" class="capture-toast"></div>
+<div id="hint-toast" class="hint-toast"></div>
+<div id="check-toast" class="check-toast"></div>
+<div id="time-request-toast" class="time-request-toast"></div>
+<div id="undo-request-toast" class="undo-request-toast"></div>
+
 <div class="game-wrap">
 
   <!-- Black player -->
@@ -502,6 +668,7 @@
     </div>
     <div class="captured-pieces" id="cap-black"></div>
     <div class="hint-badge-row">💡 <span class="hint-count" id="hint-badge-black">3</span> hints left</div>
+    <button class="btn-extra-time" id="btn-extra-time-black" onclick="askExtraTime('black')" style="display:none">⏱ Ask +1 min</button>
     <button class="btn-ready" id="btn-ready-black" onclick="toggleReady('black')">⏵ Ready</button>
   </div>
 
@@ -522,6 +689,7 @@
       <button class="btn-outline" id="btn-undo" onclick="undoMove()">↩ Undo</button>
       <button class="btn-hint" id="btn-hint" onclick="requestHint()">💡 Hint</button>
       <button class="btn-surrender" id="btn-surrender" onclick="surrender()">🏳 Surrender</button>
+      <button class="btn-flip" id="btn-flip" onclick="flipBoard()">🔄 Flip</button>
       <button class="btn-outline" id="btn-mp" onclick="toggleMpPanel()">🌐 Multi</button>
       <div class="game-config">
         Preset:
@@ -633,6 +801,7 @@
     </div>
     <div class="captured-pieces" id="cap-white"></div>
     <div class="hint-badge-row">💡 <span class="hint-count" id="hint-badge-white">3</span> hints left</div>
+    <button class="btn-extra-time" id="btn-extra-time-white" onclick="askExtraTime('white')" style="display:none">⏱ Ask +1 min</button>
     <button class="btn-ready" id="btn-ready-white" onclick="toggleReady('white')">⏵ Ready</button>
   </div>
 
@@ -672,6 +841,15 @@
   // Ready state
   let readyWhite = false, readyBlack = false;
 
+  // Board orientation: false = white on bottom, true = black on bottom
+  let boardFlipped = false;
+
+  // Game started flag (for locking settings and preventing refresh)
+  let gameStarted = false;
+
+  // Piece names for notifications
+  const PNAME_MAP = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
+
   // ---- Init ----
   function newGame() {
     if (mpMode) {
@@ -705,11 +883,15 @@
     hintsUsedBlack = 0;
     readyWhite = false;
     readyBlack = false;
+    gameStarted = false;
 
     document.getElementById('btn-undo').disabled = false;
     document.getElementById('btn-surrender').disabled = false;
     document.getElementById('btn-pause').textContent = '⏸ Pause';
     document.getElementById('hint-panel').style.display = 'none';
+
+    unlockSettings();
+    updateExtraTimeButtons();
 
     renderBoard();
     updateCaptures();
@@ -850,14 +1032,17 @@
 
     const rankLabelsEl = document.getElementById('rank-labels');
     rankLabelsEl.innerHTML = '';
-    for (let rank = 8; rank >= 1; rank--) {
+    const rankOrder = boardFlipped ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+    const fileOrder = boardFlipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+
+    for (const rank of rankOrder) {
       const span = document.createElement('span');
       span.textContent = rank;
       rankLabelsEl.appendChild(span);
     }
 
-    for (let rank = 8; rank >= 1; rank--) {
-      for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+    for (const rank of rankOrder) {
+      for (const fileIdx of fileOrder) {
         const file = FILES[fileIdx];
         const sqName = file + rank;
         const isLight = (fileIdx + rank) % 2 !== 0;
@@ -904,7 +1089,8 @@
     }
 
     const labelsEl = document.getElementById('file-labels');
-    labelsEl.innerHTML = FILES.map(f => `<span>${f}</span>`).join('');
+    const orderedFiles = boardFlipped ? [...FILES].reverse() : FILES;
+    labelsEl.innerHTML = orderedFiles.map(f => `<span>${f}</span>`).join('');
   }
 
   function findKing(color) {
@@ -940,9 +1126,25 @@
 
       const move = validMoves.find(m => m.to === sqName);
       if (move) {
+        const movingPiece = game.get(selected);
+        const capturedPiece = game.get(sqName);
         const result = game.move({ from: selected, to: sqName, promotion: 'q' });
         if (result) {
+          // Mark game as started and lock settings on first move
+          if (!gameStarted) { gameStarted = true; lockSettings(); updateExtraTimeButtons(); }
           playMoveSound(!!result.captured);
+          // Show capture notification
+          if (result.captured && movingPiece) {
+            const attackerName = movingPiece.color === 'w'
+              ? document.getElementById('name-white').value
+              : document.getElementById('name-black').value;
+            const victimName = movingPiece.color === 'w'
+              ? document.getElementById('name-black').value
+              : document.getElementById('name-white').value;
+            const capPieceName = PNAME_MAP[result.captured] || result.captured;
+            const atkPieceName = PNAME_MAP[movingPiece.type] || movingPiece.type;
+            showCaptureToast(victimName, capPieceName, attackerName, atkPieceName);
+          }
           lastMove = { from: selected, to: sqName };
           selected = null;
           validMoves = [];
@@ -1026,6 +1228,7 @@
         ? document.getElementById('name-white').value
         : document.getElementById('name-black').value;
       playCheckSound();
+      showCheckToast(who);
       setStatus(`⚠ Check! ${who}'s move`, 'check');
     } else {
       const who = game.turn() === 'w'
@@ -1061,8 +1264,38 @@
   }
 
   // ---- Undo ----
+  let _pendingUndoRequest = false;
   function undoMove() {
     if (gameOver) return;
+    if (_pendingUndoRequest) return;
+    // Check if there is a move to undo
+    if (game.history().length === 0) return;
+
+    // Determine who is requesting the undo (current turn's player wants to undo opponent's last move,
+    // or more commonly, the player who just moved wants to take it back — either way, ask the opponent)
+    const requesterColor = game.turn() === 'w' ? 'black' : 'white';
+    const requesterName = document.getElementById('name-' + requesterColor).value;
+    const opponentName = game.turn() === 'w'
+      ? document.getElementById('name-white').value
+      : document.getElementById('name-black').value;
+
+    _pendingUndoRequest = true;
+    const toast = document.getElementById('undo-request-toast');
+    toast.innerHTML = `<div>\u21A9 <strong>${requesterName}</strong> wants to undo the last move. Allow it?</div>
+      <div class="toast-btns">
+        <button class="btn-grant" onclick="grantUndo()">\u2713 Grant Undo</button>
+        <button class="btn-deny" onclick="denyUndo()">\u2717 Deny</button>
+      </div>`;
+    toast.classList.remove('show');
+    void toast.offsetWidth;
+    toast.classList.add('show');
+  }
+
+  function grantUndo() {
+    _pendingUndoRequest = false;
+    const toast = document.getElementById('undo-request-toast');
+    toast.classList.remove('show');
+
     const undone = game.undo();
     if (!undone) return;
     lastMove = null;
@@ -1075,6 +1308,18 @@
     renderTimers();
     updateStatus();
     updateHintBadges();
+
+    const who = undone.color === 'w'
+      ? document.getElementById('name-white').value
+      : document.getElementById('name-black').value;
+    showHintToast(`\u21A9 ${who}'s last move was undone!`);
+  }
+
+  function denyUndo() {
+    _pendingUndoRequest = false;
+    const toast = document.getElementById('undo-request-toast');
+    toast.classList.remove('show');
+    showHintToast('Undo request denied.');
   }
 
   // ---- Hints ----
@@ -1098,10 +1343,111 @@
       gameOver || (!unlimited && used >= hintLimit);
   }
 
+  // ---- Board flip ----
+  function flipBoard() {
+    boardFlipped = !boardFlipped;
+    renderBoard();
+  }
+
+  // ---- Lock / unlock settings ----
+  function lockSettings() {
+    document.querySelectorAll('.player-timer-config').forEach(el => el.classList.add('locked'));
+    document.querySelector('.game-config').classList.add('locked');
+  }
+  function unlockSettings() {
+    document.querySelectorAll('.player-timer-config').forEach(el => el.classList.remove('locked'));
+    document.querySelector('.game-config').classList.remove('locked');
+  }
+
+  // ---- Extra time ----
+  function updateExtraTimeButtons() {
+    const show = gameStarted && !gameOver && timerEnabled;
+    document.getElementById('btn-extra-time-white').style.display = show ? 'block' : 'none';
+    document.getElementById('btn-extra-time-black').style.display = show ? 'block' : 'none';
+  }
+
+  let _pendingTimeRequest = null;
+  function askExtraTime(requesterColor) {
+    if (gameOver || _pendingTimeRequest) return;
+    const requesterName = document.getElementById('name-' + requesterColor).value;
+    const opponentColor = requesterColor === 'white' ? 'black' : 'white';
+
+    _pendingTimeRequest = requesterColor;
+    const toast = document.getElementById('time-request-toast');
+    toast.innerHTML = `<div>⏱ <strong>${requesterName}</strong> is asking for +1 minute. Grant it?</div>
+      <div class="toast-btns">
+        <button class="btn-grant" onclick="grantExtraTime('${requesterColor}')">✓ Grant +1 min</button>
+        <button class="btn-deny" onclick="denyExtraTime()">✗ Deny</button>
+      </div>`;
+    toast.classList.add('show');
+  }
+
+  function grantExtraTime(color) {
+    if (color === 'white') timeWhite += 60;
+    else timeBlack += 60;
+    renderTimers();
+    _pendingTimeRequest = null;
+    const toast = document.getElementById('time-request-toast');
+    toast.classList.remove('show');
+    const name = document.getElementById('name-' + color).value;
+    showHintToast(`+1 minute granted to ${name}!`);
+  }
+
+  function denyExtraTime() {
+    _pendingTimeRequest = null;
+    const toast = document.getElementById('time-request-toast');
+    toast.classList.remove('show');
+    showHintToast('Extra time denied.');
+  }
+
+  // ---- Capture notification ----
+  let _captureToastTimer = null;
+  function showCaptureToast(victimName, capPieceName, attackerName, atkPieceName) {
+    const toast = document.getElementById('capture-toast');
+    toast.innerHTML = `<span class="toast-icon">\u2694</span>${victimName}'s ${capPieceName} captured by ${attackerName}'s ${atkPieceName}!`;
+    if (_captureToastTimer) clearTimeout(_captureToastTimer);
+    toast.classList.remove('show');
+    void toast.offsetWidth; // force reflow for transition restart
+    toast.classList.add('show');
+    _captureToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // ---- Check notification ----
+  let _checkToastTimer = null;
+  function showCheckToast(playerName) {
+    const toast = document.getElementById('check-toast');
+    toast.textContent = `\u26A0 ${playerName} is in Check!`;
+    if (_checkToastTimer) clearTimeout(_checkToastTimer);
+    toast.classList.remove('show');
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    _checkToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // ---- Hint notification ----
+  let _hintToastTimer = null;
+  function showHintToast(msg) {
+    const toast = document.getElementById('hint-toast');
+    toast.textContent = msg;
+    if (_hintToastTimer) clearTimeout(_hintToastTimer);
+    toast.classList.remove('show');
+    void toast.offsetWidth; // force reflow for transition restart
+    toast.classList.add('show');
+    _hintToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // ---- Prevent accidental refresh ----
+  window.addEventListener('beforeunload', function(e) {
+    if (gameStarted && !gameOver) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
   // ---- Ready / Start ----
   function toggleReady(color) {
     if (gameOver) return;
-    if (mpMode && color !== mpColor) return;
+    if (mpMode && color !== mpColor) return; // in multiplayer, only click your own
     if (color === 'white') readyWhite = true;
     else readyBlack = true;
     updateReadyButtons();
@@ -1209,9 +1555,13 @@
     if (isWhite) hintsUsedWhite++; else hintsUsedBlack++;
     updateHintBadges();
 
+    // Notify the opponent that a hint was used
     const playerName = isWhite
       ? document.getElementById('name-white').value
       : document.getElementById('name-black').value;
+    const unlimited = hintLimit === 0;
+    const remaining = unlimited ? '\u221E' : Math.max(0, hintLimit - (isWhite ? hintsUsedWhite : hintsUsedBlack));
+    showHintToast(`\uD83D\uDCA1 ${playerName} used a hint! (${remaining} left)`);
     document.getElementById('hint-for-name').textContent = playerName;
     document.getElementById('hint-move-text').textContent = '...';
     document.getElementById('hint-explain').textContent = 'Stockfish is thinking... ♟';
@@ -1279,6 +1629,7 @@
     mpSocket.onopen = () => {
       document.getElementById('mp-code-display').textContent = mpRoomId;
       document.getElementById('mp-code-row').style.display = mpColor === 'white' ? 'flex' : 'none';
+      // Lock opponent's name — only you edit your own
       const opColor = mpColor === 'white' ? 'black' : 'white';
       document.getElementById('name-' + opColor).disabled = true;
     };
@@ -1317,9 +1668,20 @@
         setMpStatus(`✓ Opponent connected! You play ${mpColor}`);
 
       } else if (d.type === 'move') {
+        const movingPiece = game.get(d.move.from);
         const r = game.move({ from: d.move.from, to: d.move.to, promotion: d.move.promotion || 'q' });
         if (r) {
+          if (!gameStarted) { gameStarted = true; lockSettings(); updateExtraTimeButtons(); }
           playMoveSound(!!r.captured);
+          if (r.captured && movingPiece) {
+            const atkName = movingPiece.color === 'w'
+              ? document.getElementById('name-white').value
+              : document.getElementById('name-black').value;
+            const vicName = movingPiece.color === 'w'
+              ? document.getElementById('name-black').value
+              : document.getElementById('name-white').value;
+            showCaptureToast(vicName, PNAME_MAP[r.captured] || r.captured, atkName, PNAME_MAP[movingPiece.type] || movingPiece.type);
+          }
           lastMove = { from: d.move.from, to: d.move.to };
           if (d.timeWhite !== undefined) timeWhite = d.timeWhite;
           if (d.timeBlack !== undefined) timeBlack = d.timeBlack;
