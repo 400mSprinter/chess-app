@@ -1720,17 +1720,50 @@
       const piece = game.get(from);
       const gameCopy = new Chess(fen);
       const result = gameCopy.move({ from, to, promotion: promo || 'q' });
-      let explain = (piece ? PNAMES[piece.type] : '?') + ' ' + from + ' → ' + to;
-      if (result) {
-        if (result.captured) explain += '  (captures ' + (PNAMES[result.captured] || result.captured) + ')';
-        if (promo) explain += '  → promotes to ' + (PNAMES[promo] || promo);
-        if (gameCopy.in_checkmate()) explain += '  — Checkmate!';
-        else if (gameCopy.in_check()) explain += '  — Gives check!';
-      }
-      document.getElementById('hint-move-text').textContent = result ? result.san : from + '-' + to;
-      document.getElementById('hint-explain').textContent = explain;
+      const moveSan = result ? result.san : from + '-' + to;
+      document.getElementById('hint-move-text').textContent = moveSan;
+      document.getElementById('hint-explain').textContent = '🤔 Claude is thinking of an explanation...';
       hintHighlight = { from, to };
       renderBoard();
+
+      // Ask Claude for a kid-friendly explanation
+      try {
+        const resp = await fetch('/hint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fen,
+            move_san: moveSan,
+            piece: piece ? PNAMES[piece.type] : 'Piece',
+            from_sq: from,
+            to_sq: to,
+            captures: result && result.captured ? (PNAMES[result.captured] || result.captured) : null,
+            gives_check: gameCopy.in_check() && !gameCopy.in_checkmate(),
+            checkmate: gameCopy.in_checkmate(),
+            promotion: promo ? (PNAMES[promo] || promo) : null
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.explanation) {
+            document.getElementById('hint-explain').textContent = data.explanation;
+          } else {
+            throw new Error(data.error || 'no explanation');
+          }
+        } else {
+          throw new Error('server error');
+        }
+      } catch (_) {
+        // Fallback to basic description if Claude is unavailable
+        let explain = (piece ? PNAMES[piece.type] : '?') + ' ' + from + ' → ' + to;
+        if (result) {
+          if (result.captured) explain += '  (captures ' + (PNAMES[result.captured] || result.captured) + ')';
+          if (promo) explain += '  → promotes to ' + (PNAMES[promo] || promo);
+          if (gameCopy.in_checkmate()) explain += '  — Checkmate!';
+          else if (gameCopy.in_check()) explain += '  — Gives check!';
+        }
+        document.getElementById('hint-explain').textContent = explain;
+      }
     } catch (e) {
       document.getElementById('hint-move-text').textContent = '—';
       document.getElementById('hint-explain').textContent = '😕 Could not get hint: ' + e.message;
