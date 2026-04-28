@@ -1464,6 +1464,49 @@
   }
 
   // ---- Hints ----
+  function explainHint(piece, from, to, result, gameCopy, promo, PNAMES) {
+    const name = piece ? PNAMES[piece.type] : 'Piece';
+    const VALS = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+    if (gameCopy.in_checkmate())
+      return `Moving the ${name} to ${to} is checkmate — you WIN! 🏆 The opponent's King is completely trapped with nowhere to run and no way to escape. Game over!`;
+
+    if (promo) {
+      const pName = PNAMES[promo] || promo;
+      const extra = gameCopy.in_check() ? 'and it puts the King in check right away!' : "making your army much more powerful!";
+      return `Your Pawn walked all the way to the other side of the board and gets to turn into a ${pName}! 🌟 That's like getting a superpower — ${extra}`;
+    }
+
+    if (result && result.captured) {
+      const capName = PNAMES[result.captured] || result.captured;
+      const capVal = VALS[result.captured] || 1;
+      const myVal  = piece ? (VALS[piece.type] || 1) : 1;
+      if (gameCopy.in_check())
+        return `The ${name} captures the opponent's ${capName} AND puts the King in check at the same time! ⚔️ Taking a piece and attacking the King in one move is an awesome combo!`;
+      if (capVal > myVal)
+        return `The ${name} captures the opponent's ${capName}, which is worth more points than your ${name}! 😄 Trading a less valuable piece for a more valuable one is like getting a great deal — you come out ahead!`;
+      if (capVal === myVal)
+        return `The ${name} captures the opponent's ${capName} for an even trade! ⚔️ Sometimes a fair trade is the right call — it removes a piece that was causing trouble.`;
+      return `The ${name} captures the opponent's ${capName}! ⚔️ Taking away enemy pieces makes it easier to corner their King later on.`;
+    }
+
+    if (gameCopy.in_check())
+      return `Moving the ${name} to ${to} puts the opponent's King in check! 👑 When the King is in check, the opponent MUST deal with it right away — they can't do anything else until it's safe.`;
+
+    const centerSquares = ['d4','d5','e4','e5'];
+    const nearCenter    = ['c3','c4','c5','c6','d3','d6','e3','e6','f3','f4','f5','f6'];
+    if (centerSquares.includes(to))
+      return `Moving the ${name} to the very center of the board is a smart strategy! 🎯 Pieces in the middle control more squares and can jump to attack anywhere super fast. Whoever owns the center usually wins!`;
+    if (nearCenter.includes(to) && piece && (piece.type === 'n' || piece.type === 'b'))
+      return `Bringing the ${name} toward the center puts it in a really active spot! 🚀 Knights and Bishops are most powerful when they're near the middle — from there they can reach almost the whole board.`;
+
+    const backRanks = ['a1','b1','c1','d1','e1','f1','g1','h1','a8','b8','c8','d8','e8','f8','g8','h8'];
+    if (backRanks.includes(from) && piece && piece.type !== 'k' && piece.type !== 'p')
+      return `Bringing the ${name} into the game gets it off the back row and into the action! 🚀 The more pieces you have working together, the harder it is for your opponent to defend. Don't leave your team sitting on the bench!`;
+
+    return `Moving the ${name} to ${to} improves your position step by step! ⭐ It controls important squares and makes life harder for the opponent. In chess, small advantages like this add up to a win!`;
+  }
+
   function updateHintBadges() {
     const unlimited = hintLimit === 0;
     const wLeft = unlimited ? '∞' : Math.max(0, hintLimit - hintsUsedWhite);
@@ -1722,48 +1765,9 @@
       const result = gameCopy.move({ from, to, promotion: promo || 'q' });
       const moveSan = result ? result.san : from + '-' + to;
       document.getElementById('hint-move-text').textContent = moveSan;
-      document.getElementById('hint-explain').textContent = '🤔 Claude is thinking of an explanation...';
+      document.getElementById('hint-explain').textContent = explainHint(piece, from, to, result, gameCopy, promo, PNAMES);
       hintHighlight = { from, to };
       renderBoard();
-
-      // Ask Claude for a kid-friendly explanation
-      try {
-        const resp = await fetch('/hint', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fen,
-            move_san: moveSan,
-            piece: piece ? PNAMES[piece.type] : 'Piece',
-            from_sq: from,
-            to_sq: to,
-            captures: result && result.captured ? (PNAMES[result.captured] || result.captured) : null,
-            gives_check: gameCopy.in_check() && !gameCopy.in_checkmate(),
-            checkmate: gameCopy.in_checkmate(),
-            promotion: promo ? (PNAMES[promo] || promo) : null
-          })
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.explanation) {
-            document.getElementById('hint-explain').textContent = data.explanation;
-          } else {
-            throw new Error(data.error || 'no explanation');
-          }
-        } else {
-          throw new Error('server error');
-        }
-      } catch (_) {
-        // Fallback to basic description if Claude is unavailable
-        let explain = (piece ? PNAMES[piece.type] : '?') + ' ' + from + ' → ' + to;
-        if (result) {
-          if (result.captured) explain += '  (captures ' + (PNAMES[result.captured] || result.captured) + ')';
-          if (promo) explain += '  → promotes to ' + (PNAMES[promo] || promo);
-          if (gameCopy.in_checkmate()) explain += '  — Checkmate!';
-          else if (gameCopy.in_check()) explain += '  — Gives check!';
-        }
-        document.getElementById('hint-explain').textContent = explain;
-      }
     } catch (e) {
       document.getElementById('hint-move-text').textContent = '—';
       document.getElementById('hint-explain').textContent = '😕 Could not get hint: ' + e.message;

@@ -9,8 +9,6 @@ Run from project root:
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-from typing import Optional
 
 app = FastAPI()
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,70 +18,6 @@ rooms: dict = {}
 
 with open(os.path.join(HERE, "index.html"), "r", encoding="utf-8") as _f:
     _INDEX_HTML = _f.read()
-
-
-_anthropic = None
-
-def _get_anthropic():
-    global _anthropic
-    if _anthropic is None:
-        import anthropic
-        _anthropic = anthropic.Anthropic()
-    return _anthropic
-
-_HINT_SYSTEM = [{
-    "type": "text",
-    "text": (
-        "You are a friendly chess coach explaining moves to an elementary school student (ages 6-10). "
-        "Keep your explanation to 2-3 short, simple sentences. Use everyday words a kid would understand. "
-        "Be encouraging and include 1-2 fun emojis. "
-        "Focus on WHY this is the best move — what danger it creates, what danger it stops, or what advantage it wins. "
-        "Describe pieces by their names (King, Queen, Rook, etc.), not chess notation."
-    ),
-    "cache_control": {"type": "ephemeral"}
-}]
-
-
-class HintRequest(BaseModel):
-    fen: str
-    move_san: str
-    piece: str
-    from_sq: str
-    to_sq: str
-    captures: Optional[str] = None
-    gives_check: bool = False
-    checkmate: bool = False
-    promotion: Optional[str] = None
-
-
-@app.post("/hint")
-async def get_hint(req: HintRequest):
-    try:
-        client = _get_anthropic()
-        desc = f"{req.piece} moves from {req.from_sq} to {req.to_sq}"
-        if req.captures:
-            desc += f", capturing the opponent's {req.captures}"
-        if req.promotion:
-            desc += f", and promotes to a {req.promotion}"
-        if req.checkmate:
-            desc += " — and this wins the game with checkmate!"
-        elif req.gives_check:
-            desc += " — and this puts the opponent's King in check!"
-
-        response = client.messages.create(
-            model="claude-opus-4-7",
-            max_tokens=300,
-            thinking={"type": "adaptive"},
-            system=_HINT_SYSTEM,
-            messages=[{"role": "user", "content": (
-                f"The best chess move is: {desc} (chess notation: {req.move_san}). "
-                "Please explain in 2-3 simple sentences why this is the best move right now."
-            )}],
-        )
-        explanation = next((b.text for b in response.content if b.type == "text"), "")
-        return {"explanation": explanation}
-    except Exception as e:
-        return {"explanation": None, "error": str(e)}
 
 
 @app.get("/")
