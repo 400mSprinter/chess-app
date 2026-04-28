@@ -8,7 +8,7 @@ Run from project root:
 """
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -16,10 +16,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # room_id -> {white: ws|None, black: ws|None, fen: str|None, last_move: dict|None}
 rooms: dict = {}
 
+with open(os.path.join(HERE, "index.html"), "r", encoding="utf-8") as _f:
+    _INDEX_HTML = _f.read()
+
 
 @app.get("/")
 async def serve_index():
-    return FileResponse(os.path.join(HERE, "index.html"))
+    return HTMLResponse(_INDEX_HTML)
 
 
 @app.websocket("/ws/{room_id}/{color}")
