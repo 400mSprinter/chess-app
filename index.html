@@ -621,6 +621,22 @@
       .btn-extra-time { padding: 6px 10px; font-size: 11px; width: auto; }
       .btn-ready { padding: 7px 12px; font-size: 12px; width: auto; }
 
+      /* Mobile ready bar: shown at top by default, moves to bottom after game starts */
+      #mobile-ready-bar {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+        order: -1;
+      }
+      #mobile-ready-bar .btn-ready { flex: 1; font-size: 13px; }
+      body.game-started #mobile-ready-bar { order: 100; }
+      /* Hide the original per-panel ready buttons on mobile */
+      #btn-ready-black, #btn-ready-white { display: none; }
+
+      /* Functionality buttons below chat */
+      .controls { order: 10; }
+      .mp-panel  { order: 11; }
+
       /* Board */
       .board-wrap { width: 100%; gap: 4px; }
       .status-bar {
@@ -647,6 +663,9 @@
       .mp-code { font-size: 20px; }
       .mp-input { width: 65px; font-size: 14px; touch-action: manipulation; }
     }
+
+    /* Mobile-only ready bar */
+    #mobile-ready-bar { display: none; }
 
     /* Ready button */
     .btn-ready {
@@ -773,6 +792,12 @@
 <div id="undo-request-toast" class="undo-request-toast"></div>
 
 <div class="game-wrap">
+
+  <!-- Mobile-only ready bar: sits at top pre-game, bottom after game starts -->
+  <div id="mobile-ready-bar" class="mobile-ready-bar">
+    <button class="btn-ready" id="btn-ready-mb-black" onclick="toggleReady('black')">⏵ Grandma</button>
+    <button class="btn-ready" id="btn-ready-mb-white" onclick="toggleReady('white')">⏵ Leah</button>
+  </div>
 
   <!-- Black player -->
   <div class="player-panel" id="panel-black">
@@ -1025,6 +1050,7 @@
     readyWhite = false;
     readyBlack = false;
     gameStarted = false;
+    document.body.classList.remove('game-started');
 
     document.getElementById('btn-undo').disabled = false;
     document.getElementById('btn-surrender').disabled = false;
@@ -1272,7 +1298,7 @@
         const result = game.move({ from: selected, to: sqName, promotion: 'q' });
         if (result) {
           // Mark game as started and lock settings on first move
-          if (!gameStarted) { gameStarted = true; lockSettings(); updateExtraTimeButtons(); }
+          if (!gameStarted) { gameStarted = true; document.body.classList.add('game-started'); lockSettings(); updateExtraTimeButtons(); }
           playMoveSound(!!result.captured);
           // Show capture notification
           if (result.captured && movingPiece) {
@@ -1642,19 +1668,36 @@
   }
 
   function updateReadyButtons() {
+    const canW = !readyWhite && !gameOver && (!mpMode || mpColor === 'white');
+    const canB = !readyBlack && !gameOver && (!mpMode || mpColor === 'black');
+
     const wBtn = document.getElementById('btn-ready-white');
-    const bBtn = document.getElementById('btn-ready-black');
     if (wBtn) {
       wBtn.textContent = readyWhite ? '✓ Ready!' : '⏵ Ready';
       wBtn.classList.toggle('is-ready', readyWhite);
-      const canW = !readyWhite && !gameOver && (!mpMode || mpColor === 'white');
       wBtn.disabled = !canW;
     }
+    const bBtn = document.getElementById('btn-ready-black');
     if (bBtn) {
       bBtn.textContent = readyBlack ? '✓ Ready!' : '⏵ Ready';
       bBtn.classList.toggle('is-ready', readyBlack);
-      const canB = !readyBlack && !gameOver && (!mpMode || mpColor === 'black');
       bBtn.disabled = !canB;
+    }
+
+    // Sync mobile bar buttons (show player names so it's clear who is who)
+    const wName = (document.getElementById('name-white') || {}).value || 'White';
+    const bName = (document.getElementById('name-black') || {}).value || 'Black';
+    const wMob = document.getElementById('btn-ready-mb-white');
+    if (wMob) {
+      wMob.textContent = readyWhite ? `✓ ${wName} Ready!` : `⏵ ${wName}`;
+      wMob.classList.toggle('is-ready', readyWhite);
+      wMob.disabled = !canW;
+    }
+    const bMob = document.getElementById('btn-ready-mb-black');
+    if (bMob) {
+      bMob.textContent = readyBlack ? `✓ ${bName} Ready!` : `⏵ ${bName}`;
+      bMob.classList.toggle('is-ready', readyBlack);
+      bMob.disabled = !canB;
     }
   }
 
@@ -1698,6 +1741,7 @@
       const name = document.getElementById('name-' + color).value;
       mpSocket.send(JSON.stringify({ type: 'name', color, name }));
     }
+    updateReadyButtons(); // keep mobile bar labels in sync
   }
 
   // ---- Stockfish Hint (runs in browser via Web Worker — no API key needed) ----
@@ -1851,7 +1895,7 @@
         const movingPiece = game.get(d.move.from);
         const r = game.move({ from: d.move.from, to: d.move.to, promotion: d.move.promotion || 'q' });
         if (r) {
-          if (!gameStarted) { gameStarted = true; lockSettings(); updateExtraTimeButtons(); }
+          if (!gameStarted) { gameStarted = true; document.body.classList.add('game-started'); lockSettings(); updateExtraTimeButtons(); }
           playMoveSound(!!r.captured);
           if (r.captured && movingPiece) {
             const atkName = movingPiece.color === 'w'
@@ -2039,9 +2083,15 @@
     const h = window.innerHeight;
     let sz;
     if (w <= 599) {
-      // Mobile: fill available width (body padding 8px×2, rank labels 20px + gap 4px)
+      // Mobile: single column — fill width minus body padding (8×2) and rank labels+gap (24)
       sz = Math.floor((w - 16 - 24) / 8);
       sz = Math.min(Math.max(sz, 36), 62);
+    } else if (w <= 1100) {
+      // Tablet: horizontal layout — subtract body padding (20×2), two player panels (155×2),
+      // gaps between board and panels (24×2), then rank labels+gap (24)
+      const available = w - 40 - 310 - 48;
+      sz = Math.floor((available - 24) / 8);
+      sz = Math.min(Math.max(sz, 36), 90);
     } else {
       const vmin = Math.min(w, h);
       sz = Math.min(110, Math.max(44, Math.floor((vmin - 220) / 8)));
