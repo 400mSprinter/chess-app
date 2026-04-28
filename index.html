@@ -701,11 +701,70 @@
       font-size: 13px;
     }
     .chat-input:focus { outline: none; border-color: var(--accent); }
+
+    /* Rejoin banner */
+    .rejoin-banner {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 700px;
+    }
+    .rejoin-banner strong { color: var(--accent); }
+    .rejoin-banner .btn-outline { padding: 6px 14px; font-size: 13px; }
+
+    /* "You are playing as" banner */
+    .you-are-banner {
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.03em;
+      width: 100%;
+    }
+    .you-are-banner.white {
+      background: rgba(240,217,181,0.15);
+      border: 1px solid var(--light-sq);
+      color: var(--light-sq);
+    }
+    .you-are-banner.black {
+      background: rgba(181,136,99,0.15);
+      border: 1px solid var(--dark-sq);
+      color: #d4a870;
+    }
+
+    /* YOU badge inside player panel */
+    .you-badge {
+      display: none;
+      font-size: 10px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
 
 <h1>♟ <span>Leah's Chess</span> <small style="font-size:12px;font-weight:400;color:var(--text-dim);margin-left:6px;">Built by Justin Song</small></h1>
+
+<div id="rejoin-banner" class="rejoin-banner" style="display:none">
+  ↩ 이전 게임에 다시 참여할까요? 방 코드 <strong id="rejoin-code">—</strong>, <strong id="rejoin-color-text">—</strong>으로
+  <button class="btn-primary" onclick="rejoinGame()">재접속</button>
+  <button class="btn-outline" onclick="dismissRejoin()">취소</button>
+</div>
 
 <div id="capture-toast" class="capture-toast"></div>
 <div id="hint-toast" class="hint-toast"></div>
@@ -717,8 +776,8 @@
 
   <!-- Black player -->
   <div class="player-panel" id="panel-black">
-    <div class="player-label">Black ■</div>
-    <input class="player-name-input" id="name-black" value="Daughter" oninput="onNameChange('black')" />
+    <div class="player-label">Black ■ <span class="you-badge" id="you-badge-black">YOU</span></div>
+    <input class="player-name-input" id="name-black" value="Grandma" oninput="onNameChange('black')" />
     <div class="timer black-timer" id="timer-black">10:00</div>
     <div class="player-timer-config">
       ⏱
@@ -761,6 +820,7 @@
       <div class="rank-spacer"></div>
       <div class="board-labels-file" id="file-labels"></div>
     </div>
+    <div id="you-are-banner" class="you-are-banner" style="display:none"></div>
     <div class="status-bar" id="status">White's turn</div>
     <div class="controls">
       <button class="btn-primary" onclick="newGame()">New Game</button>
@@ -850,8 +910,8 @@
 
   <!-- White player -->
   <div class="player-panel" id="panel-white">
-    <div class="player-label">White □</div>
-    <input class="player-name-input" id="name-white" value="Dad" oninput="onNameChange('white')" />
+    <div class="player-label">White □ <span class="you-badge" id="you-badge-white">YOU</span></div>
+    <input class="player-name-input" id="name-white" value="Leah" oninput="onNameChange('white')" />
     <div class="timer white-timer" id="timer-white">10:00</div>
     <div class="player-timer-config">
       ⏱
@@ -938,6 +998,8 @@
       setMpStatus('');
       document.getElementById('mp-panel').style.display = 'none';
     }
+    clearMpSession();
+    updateYouAreBanner();
     game = new Chess();
     selected = null;
     validMoves = [];
@@ -1711,6 +1773,8 @@
       // Lock opponent's name — only you edit your own
       const opColor = mpColor === 'white' ? 'black' : 'white';
       document.getElementById('name-' + opColor).disabled = true;
+      saveMpSession();
+      updateYouAreBanner();
     };
 
     mpSocket.onmessage = (evt) => {
@@ -1790,6 +1854,7 @@
       mpMode = false;
       document.getElementById('name-white').disabled = false;
       document.getElementById('name-black').disabled = false;
+      updateYouAreBanner();
     };
     mpSocket.onerror = () => setMpStatus('Connection error — is the server running?');
   }
@@ -1797,6 +1862,70 @@
   function setMpStatus(msg) {
     const el = document.getElementById('mp-status');
     if (el) el.textContent = msg;
+  }
+
+  // ---- Multiplayer session persistence (localStorage) ----
+  const MP_SESSION_KEY = 'chess_mp_session';
+
+  function saveMpSession() {
+    localStorage.setItem(MP_SESSION_KEY, JSON.stringify({
+      roomId: mpRoomId,
+      color: mpColor,
+      nameWhite: document.getElementById('name-white').value,
+      nameBlack: document.getElementById('name-black').value,
+    }));
+  }
+
+  function clearMpSession() {
+    localStorage.removeItem(MP_SESSION_KEY);
+  }
+
+  function checkRejoinSession() {
+    try {
+      const raw = localStorage.getItem(MP_SESSION_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (!s.roomId || !s.color) { clearMpSession(); return; }
+      window._rejoinSession = s;
+      document.getElementById('rejoin-code').textContent = s.roomId;
+      document.getElementById('rejoin-color-text').textContent =
+        s.color === 'white' ? '♔ WHITE' : '♚ BLACK';
+      document.getElementById('rejoin-banner').style.display = 'flex';
+    } catch(e) { clearMpSession(); }
+  }
+
+  function rejoinGame() {
+    const s = window._rejoinSession;
+    if (!s) return;
+    document.getElementById('rejoin-banner').style.display = 'none';
+    if (s.nameWhite) document.getElementById('name-white').value = s.nameWhite;
+    if (s.nameBlack) document.getElementById('name-black').value = s.nameBlack;
+    document.getElementById('mp-panel').style.display = 'block';
+    mpRoomId = s.roomId;
+    mpColor = s.color;
+    mpConnect();
+  }
+
+  function dismissRejoin() {
+    clearMpSession();
+    window._rejoinSession = null;
+    document.getElementById('rejoin-banner').style.display = 'none';
+  }
+
+  // ---- You are playing as indicator ----
+  function updateYouAreBanner() {
+    const banner = document.getElementById('you-are-banner');
+    document.getElementById('you-badge-white').style.display = 'none';
+    document.getElementById('you-badge-black').style.display = 'none';
+    if (!mpMode || !mpColor) {
+      banner.style.display = 'none';
+      return;
+    }
+    const isWhite = mpColor === 'white';
+    banner.style.display = 'block';
+    banner.className = 'you-are-banner ' + mpColor;
+    banner.textContent = isWhite ? '♔ You are playing as WHITE' : '♚ You are playing as BLACK';
+    document.getElementById('you-badge-' + mpColor).style.display = 'inline';
   }
 
   // ---- Audio ----
@@ -1892,6 +2021,7 @@
     btn.title = 'Multiplayer requires the server (not available as a local file)';
   }
   newGame();
+  checkRejoinSession();
 </script>
 </body>
 </html>
