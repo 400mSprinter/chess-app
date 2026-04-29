@@ -695,8 +695,8 @@
       .mp-input { width: 65px; font-size: 14px; touch-action: manipulation; }
     }
 
-    /* Mobile-only ready bar */
-    #mobile-ready-bar { display: none; }
+    /* Mobile-only ready bar: hidden on tablet/desktop, flex on mobile (set in media query below) */
+    @media (min-width: 600px) { #mobile-ready-bar { display: none; } }
 
     /* Ready button */
     .btn-ready {
