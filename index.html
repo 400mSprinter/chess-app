@@ -1717,7 +1717,7 @@
   let _captureToastTimer = null;
   function showCaptureToast(victimName, capPieceName, attackerName, atkPieceName) {
     const toast = document.getElementById('capture-toast');
-    toast.innerHTML = `<span class="toast-icon">\u2694</span>${victimName}'s ${capPieceName} captured by ${attackerName}'s ${atkPieceName}!`;
+    toast.innerHTML = `<span class="toast-icon">\u2694</span>${attackerName}'s ${atkPieceName} captured ${victimName}'s ${capPieceName}!`;
     if (_captureToastTimer) clearTimeout(_captureToastTimer);
     toast.classList.remove('show');
     void toast.offsetWidth; // force reflow for transition restart
