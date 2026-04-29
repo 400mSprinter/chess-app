@@ -1,4 +1,4 @@
-<!-- Created: 2026-03-11 14:00 -->
+﻿<!-- Created: 2026-03-11 14:00 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -383,6 +383,36 @@
     .hint-move-row strong { color: #f59e0b; font-size: 17px; margin-left: 4px; }
     .hint-explain { font-size: 14px; line-height: 1.65; color: var(--text); transition: color 0.5s; }
 
+    /* Log panel */
+    .log-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      max-width: calc(var(--sq-size) * 8 + var(--rank-w) + 4px);
+      width: 100%;
+    }
+    .log-header {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .log-entries {
+      height: 120px;
+      overflow-y: auto;
+      font-size: 11px;
+      line-height: 1.65;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .log-entry { padding: 1px 2px; white-space: pre-wrap; word-break: break-word; }
+    .log-move  { color: var(--text); }
+    .log-event { color: var(--text-dim); }
+    .log-game  { color: var(--accent); font-weight: 600; }
+
     /* Multiplayer panel */
     .mp-panel {
       background: var(--surface);
@@ -626,16 +656,17 @@
         display: flex;
         gap: 8px;
         width: 100%;
-        order: -1;
+        order: -10;
       }
       #mobile-ready-bar .btn-ready { flex: 1; font-size: 13px; }
       body.game-started #mobile-ready-bar { order: 100; }
       /* Hide the original per-panel ready buttons on mobile */
       #btn-ready-black, #btn-ready-white { display: none; }
 
-      /* Functionality buttons below chat */
-      .controls { order: 10; }
+      /* Functionality buttons below chat, log below that */
+      .controls  { order: 10; }
       .mp-panel  { order: 11; }
+      .log-panel { order: 12; max-width: unset; }
 
       /* Board */
       .board-wrap { width: 100%; gap: 4px; }
@@ -692,7 +723,7 @@
       gap: 8px;
     }
     .chat-header {
-      font-size: 11px;
+      font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-dim);
@@ -931,6 +962,11 @@
         <button class="btn-outline" onclick="sendChat()">Send</button>
       </div>
     </div>
+
+    <div class="log-panel">
+      <div class="log-header">📋 Game Log</div>
+      <div class="log-entries" id="log-entries"></div>
+    </div>
   </div>
 
   <!-- White player -->
@@ -1051,6 +1087,9 @@
     readyBlack = false;
     gameStarted = false;
     document.body.classList.remove('game-started');
+    const logEl = document.getElementById('log-entries');
+    if (logEl) logEl.innerHTML = '';
+    addLog('🟢 New game — waiting for players to ready up', 'game');
 
     document.getElementById('btn-undo').disabled = false;
     document.getElementById('btn-surrender').disabled = false;
@@ -1139,6 +1178,7 @@
       : document.getElementById('name-white').value;
     playGameOverSound();
     setStatus(`⏰ Time's up! ${winner} wins on time!`, 'game-over');
+    addLog(`⏰ Time's up! ${winner} wins on time!`, 'game');
     updateBackground();
   }
 
@@ -1317,6 +1357,14 @@
           validMoves = [];
           hintHighlight = null;
           document.getElementById('hint-panel').style.display = 'none';
+          { // log the move
+            const moverName = result.color === 'w'
+              ? document.getElementById('name-white').value
+              : document.getElementById('name-black').value;
+            let logMsg = `♟ ${moverName}: ${result.san}`;
+            if (result.captured) logMsg += ` ✕${PNAME_MAP[result.captured]||result.captured}`;
+            addLog(logMsg, 'move');
+          }
           // Fischer increment for the player who just moved
           if (game.turn() === 'b' && totalSecsW > 0 && incSecsW > 0) timeWhite += incSecsW;
           else if (game.turn() === 'w' && totalSecsB > 0 && incSecsB > 0) timeBlack += incSecsB;
@@ -1370,6 +1418,7 @@
         ? document.getElementById('name-black').value
         : document.getElementById('name-white').value;
       setStatus(`♛ Checkmate! ${winner} wins!`, 'game-over');
+      if (!gameOver) addLog(`🏆 Checkmate! ${winner} wins!`, 'game');
       gameOver = true;
       playGameOverSound();
       clearInterval(timerInterval);
@@ -1378,6 +1427,7 @@
       updateBackground();
     } else if (game.in_stalemate()) {
       setStatus('½ Stalemate — Draw!', 'game-over');
+      if (!gameOver) addLog('½ Stalemate — Draw!', 'game');
       gameOver = true;
       playGameOverSound();
       clearInterval(timerInterval);
@@ -1385,6 +1435,7 @@
       updateBackground();
     } else if (game.in_draw()) {
       setStatus('½ Draw!', 'game-over');
+      if (!gameOver) addLog('½ Draw!', 'game');
       gameOver = true;
       playGameOverSound();
       clearInterval(timerInterval);
@@ -1427,6 +1478,7 @@
     document.getElementById('btn-surrender').disabled = true;
     playGameOverSound();
     setStatus(`🏳 ${loser} surrendered — ${winner} wins!`, 'game-over');
+    addLog(`🏳 ${loser} surrendered — ${winner} wins!`, 'game');
     updateBackground();
   }
 
@@ -1447,6 +1499,7 @@
       : document.getElementById('name-black').value;
 
     _pendingUndoRequest = true;
+    addLog(`↩ ${requesterName} requested an undo`, 'event');
     const toast = document.getElementById('undo-request-toast');
     toast.innerHTML = `<div>\u21A9 <strong>${requesterName}</strong> wants to undo the last move. Allow it?</div>
       <div class="toast-btns">
@@ -1479,6 +1532,7 @@
     const who = undone.color === 'w'
       ? document.getElementById('name-white').value
       : document.getElementById('name-black').value;
+    addLog(`\u2713 Undo granted — ${who}'s move taken back`, 'event');
     showHintToast(`\u21A9 ${who}'s last move was undone!`);
   }
 
@@ -1486,6 +1540,7 @@
     _pendingUndoRequest = false;
     const toast = document.getElementById('undo-request-toast');
     toast.classList.remove('show');
+    addLog('✗ Undo request denied', 'event');
     showHintToast('Undo request denied.');
   }
 
@@ -1583,6 +1638,7 @@
     const opponentColor = requesterColor === 'white' ? 'black' : 'white';
 
     _pendingTimeRequest = requesterColor;
+    addLog(`⏱ ${requesterName} asked for +1 minute`, 'event');
     const toast = document.getElementById('time-request-toast');
     toast.innerHTML = `<div>⏱ <strong>${requesterName}</strong> is asking for +1 minute. Grant it?</div>
       <div class="toast-btns">
@@ -1600,6 +1656,7 @@
     const toast = document.getElementById('time-request-toast');
     toast.classList.remove('show');
     const name = document.getElementById('name-' + color).value;
+    addLog(`✓ +1 minute granted to ${name}`, 'event');
     showHintToast(`+1 minute granted to ${name}!`);
   }
 
@@ -1607,6 +1664,7 @@
     _pendingTimeRequest = null;
     const toast = document.getElementById('time-request-toast');
     toast.classList.remove('show');
+    addLog('✗ Extra time denied', 'event');
     showHintToast('Extra time denied.');
   }
 
@@ -1661,6 +1719,8 @@
     if (color === 'white') readyWhite = true;
     else readyBlack = true;
     updateReadyButtons();
+    const rName = document.getElementById('name-' + color).value || color;
+    addLog(`✓ ${rName} is ready`, 'event');
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
       mpSocket.send(JSON.stringify({ type: 'ready', color }));
     }
@@ -1735,6 +1795,22 @@
     while (el.children.length > 100) el.removeChild(el.firstChild);
   }
 
+  // ---- Game Log ----
+  function addLog(msg, type = 'event') {
+    const el = document.getElementById('log-entries');
+    if (!el) return;
+    const now = new Date();
+    const ts = now.getHours().toString().padStart(2,'0') + ':' +
+               now.getMinutes().toString().padStart(2,'0') + ':' +
+               now.getSeconds().toString().padStart(2,'0');
+    const row = document.createElement('div');
+    row.className = 'log-entry log-' + type;
+    row.textContent = ts + '  ' + msg;
+    el.appendChild(row);
+    while (el.children.length > 200) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  }
+
   // ---- Name sync ----
   function onNameChange(color) {
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
@@ -1787,6 +1863,7 @@
     const playerName = isWhite
       ? document.getElementById('name-white').value
       : document.getElementById('name-black').value;
+    addLog(`💡 ${playerName} used a hint`, 'event');
     const unlimited = hintLimit === 0;
     const remaining = unlimited ? '\u221E' : Math.max(0, hintLimit - (isWhite ? hintsUsedWhite : hintsUsedBlack));
     showHintToast(`\uD83D\uDCA1 ${playerName} used a hint! (${remaining} left)`);
@@ -1907,6 +1984,12 @@
             showCaptureToast(vicName, PNAME_MAP[r.captured] || r.captured, atkName, PNAME_MAP[movingPiece.type] || movingPiece.type);
           }
           lastMove = { from: d.move.from, to: d.move.to };
+          { const mName = r.color === 'w'
+              ? document.getElementById('name-white').value
+              : document.getElementById('name-black').value;
+            let lm = `♟ ${mName}: ${r.san}`;
+            if (r.captured) lm += ` ✕${PNAME_MAP[r.captured]||r.captured}`;
+            addLog(lm, 'move'); }
           if (d.timeWhite !== undefined) timeWhite = d.timeWhite;
           if (d.timeBlack !== undefined) timeBlack = d.timeBlack;
           if (!timerRunning && !gameOver) startTimer();
