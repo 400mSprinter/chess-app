@@ -1433,8 +1433,8 @@
       return;
     }
     // Check for insufficient material (one or both sides have only king)
-    const wpieces = Object.keys(game.board()).flat().filter(p => p && p.color === 'w' && p.type !== 'k').length;
-    const bpieces = Object.keys(game.board()).flat().filter(p => p && p.color === 'b' && p.type !== 'k').length;
+    const wpieces = Object.values(game.board()).flat().filter(p => p && p.color === 'w' && p.type !== 'k').length;
+    const bpieces = Object.values(game.board()).flat().filter(p => p && p.color === 'b' && p.type !== 'k').length;
     if ((wpieces === 0 || bpieces === 0) && !gameOver) {
       setStatus('½ Insufficient material — Draw!', 'game-over');
       if (!gameOver) addLog('½ Insufficient material — Draw!', 'game');
