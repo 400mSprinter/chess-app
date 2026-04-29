@@ -963,6 +963,19 @@
       </div>
     </div>
 
+    <div id="timer-display" class="timer-display">
+      <div class="timer-display-row">
+        <div class="timer-item timer-white">
+          <div class="timer-label" id="timer-label-white">White</div>
+          <div class="timer-value" id="timer-value-white">10:00</div>
+        </div>
+        <div class="timer-item timer-black">
+          <div class="timer-label" id="timer-label-black">Black</div>
+          <div class="timer-value" id="timer-value-black">10:00</div>
+        </div>
+      </div>
+    </div>
+
     <div class="log-panel">
       <div class="log-header">📋 Game Log</div>
       <div class="log-entries" id="log-entries"></div>
@@ -1311,6 +1324,15 @@
     return null;
   }
 
+  // ---- Promotion dialog ----
+  function showPromotionDialog(from, to) {
+    const piece = game.get(from);
+    const color = piece.color === 'w' ? 'white' : 'black';
+    const choice = prompt(`Promote to:\nQ = Queen (default)\nR = Rook\nB = Bishop\nN = Knight\n\nEnter Q, R, B, or N:`, 'Q').toUpperCase();
+    if (!choice || !['Q', 'R', 'B', 'N'].includes(choice)) return null;
+    return choice.toLowerCase();
+  }
+
   // ---- Click handler ----
   function onSquareClick(sqName) {
     if (gameOver) return;
@@ -1335,7 +1357,17 @@
       if (move) {
         const movingPiece = game.get(selected);
         const capturedPiece = game.get(sqName);
-        const result = game.move({ from: selected, to: sqName, promotion: 'q' });
+        // Check if this is a promotion move (pawn reaching last rank)
+        const isPromotion = move.flags && move.flags.includes('p');
+        let result;
+        if (isPromotion) {
+          // Show promotion dialog
+          const choice = showPromotionDialog(selected, sqName);
+          if (!choice) return; // User cancelled
+          result = game.move({ from: selected, to: sqName, promotion: choice });
+        } else {
+          result = game.move({ from: selected, to: sqName });
+        }
         if (result) {
           // Mark game as started and lock settings on first move
           if (!gameStarted) { gameStarted = true; document.body.classList.add('game-started'); lockSettings(); updateExtraTimeButtons(); }
@@ -1411,6 +1443,19 @@
       const wMark = readyWhite ? '✓' : '⏵';
       const bMark = readyBlack ? '✓' : '⏵';
       setStatus(`Waiting — White ${wMark}  Black ${bMark}  · click Ready to start`);
+      return;
+    }
+    // Check for insufficient material (one or both sides have only king)
+    const wpieces = Object.keys(game.board()).flat().filter(p => p && p.color === 'w' && p.type !== 'k').length;
+    const bpieces = Object.keys(game.board()).flat().filter(p => p && p.color === 'b' && p.type !== 'k').length;
+    if ((wpieces === 0 || bpieces === 0) && !gameOver) {
+      setStatus('½ Insufficient material — Draw!', 'game-over');
+      if (!gameOver) addLog('½ Insufficient material — Draw!', 'game');
+      gameOver = true;
+      playGameOverSound();
+      clearInterval(timerInterval);
+      document.getElementById('btn-surrender').disabled = true;
+      updateBackground();
       return;
     }
     if (game.in_checkmate()) {
