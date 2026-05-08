@@ -1685,11 +1685,21 @@
     else timeBlack += 60;
     renderTimers();
     _pendingTimeRequest = null;
+    // 🔧 자신이 요청한 경우 승인 불가능 (상대방만 승인 가능)
+    if (mpMode && mpColor === color) {
+      alert("You cant approve your own time request!");
+      return;
+    }
     const toast = document.getElementById('time-request-toast');
     toast.classList.remove('show');
     const name = document.getElementById('name-' + color).value;
     addLog(`✓ +1 minute granted to ${name}`, 'event');
     showHintToast(`+1 minute granted to ${name}!`);
+    
+    // 🔧 Multiplayer에서 상대방에게 승인 알림
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      mpSocket.send(JSON.stringify({ type: 'time_request_approved', requesterColor: color }));
+    }
   }
 
   function denyExtraTime() {
@@ -1746,6 +1756,13 @@
 
   // ---- Ready / Start ----
   function toggleReady(color) {
+    // 🔧 이름이 입력되지 않으면 Ready 불가능
+    const nameInput = document.getElementById('name-' + color);
+    const playerName = (nameInput?.value || '').trim();
+    if (!playerName) {
+      alert('Please enter your name before clicking Ready!');
+      return;
+    }
     if (gameOver) return;
     if (mpMode && color !== mpColor) return; // in multiplayer, only click your own
     if (color === 'white') readyWhite = true;
@@ -1760,8 +1777,11 @@
   }
 
   function updateReadyButtons() {
-    const canW = !readyWhite && !gameOver && (!mpMode || mpColor === 'white');
-    const canB = !readyBlack && !gameOver && (!mpMode || mpColor === 'black');
+    // 🔧 이름이 비어있으면 Ready 버튼 비활성화
+    const wName = (document.getElementById('name-white')?.value || '').trim();
+    const bName = (document.getElementById('name-black')?.value || '').trim();
+    const canW = !readyWhite && !gameOver && (!mpMode || mpColor === 'white') && wName.length > 0;
+    const canB = !readyBlack && !gameOver && (!mpMode || mpColor === 'black') && bName.length > 0;
 
     const wBtn = document.getElementById('btn-ready-white');
     if (wBtn) {
