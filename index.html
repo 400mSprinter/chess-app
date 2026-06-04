@@ -1141,9 +1141,13 @@
       timerRunning = false;
       document.getElementById('btn-pause').textContent = '▶ Resume';
       setStatus('Game paused', '');
+      if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+        mpSocket.send(JSON.stringify({ type: 'pause' }));
     } else {
       startTimer();
       updateStatus();
+      if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+        mpSocket.send(JSON.stringify({ type: 'resume' }));
     }
   }
 
@@ -1519,19 +1523,21 @@
   function undoMove() {
     if (gameOver) return;
     if (_pendingUndoRequest) return;
-    // Check if there is a move to undo
     if (game.history().length === 0) return;
 
-    // Determine who is requesting the undo (current turn's player wants to undo opponent's last move,
-    // or more commonly, the player who just moved wants to take it back — either way, ask the opponent)
     const requesterColor = game.turn() === 'w' ? 'black' : 'white';
+    if (mpMode && requesterColor !== mpColor) return;
     const requesterName = document.getElementById('name-' + requesterColor).value;
-    const opponentName = game.turn() === 'w'
-      ? document.getElementById('name-white').value
-      : document.getElementById('name-black').value;
 
     _pendingUndoRequest = true;
     addLog(`↩ ${requesterName} requested an undo`, 'event');
+
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      mpSocket.send(JSON.stringify({ type: 'undo_request', requesterName }));
+      showHintToast(`↩ Undo requested — waiting for opponent to approve...`);
+      return;
+    }
+
     const toast = document.getElementById('undo-request-toast');
     toast.innerHTML = `<div>\u21A9 <strong>${requesterName}</strong> wants to undo the last move. Allow it?</div>
       <div class="toast-btns">
@@ -1547,6 +1553,9 @@
     _pendingUndoRequest = false;
     const toast = document.getElementById('undo-request-toast');
     toast.classList.remove('show');
+
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+      mpSocket.send(JSON.stringify({ type: 'undo_granted' }));
 
     const undone = game.undo();
     if (!undone) return;
@@ -1572,6 +1581,8 @@
     _pendingUndoRequest = false;
     const toast = document.getElementById('undo-request-toast');
     toast.classList.remove('show');
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+      mpSocket.send(JSON.stringify({ type: 'undo_denied' }));
     addLog('✗ Undo request denied', 'event');
     showHintToast('Undo request denied.');
   }
@@ -1667,39 +1678,39 @@
   function askExtraTime(requesterColor) {
     if (gameOver || _pendingTimeRequest) return;
     const requesterName = document.getElementById('name-' + requesterColor).value;
-    const opponentColor = requesterColor === 'white' ? 'black' : 'white';
 
     _pendingTimeRequest = requesterColor;
     addLog(`⏱ ${requesterName} asked for +1 minute`, 'event');
+
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
+      mpSocket.send(JSON.stringify({ type: 'time_request', requesterColor, requesterName }));
+      showHintToast(`⏱ Time request sent — waiting for opponent...`);
+      return;
+    }
+
     const toast = document.getElementById('time-request-toast');
     toast.innerHTML = `<div>⏱ <strong>${requesterName}</strong> is asking for +1 minute. Grant it?</div>
       <div class="toast-btns">
         <button class="btn-grant" onclick="grantExtraTime('${requesterColor}')">✓ Grant +1 min</button>
         <button class="btn-deny" onclick="denyExtraTime()">✗ Deny</button>
       </div>`;
+    toast.classList.remove('show');
+    void toast.offsetWidth;
     toast.classList.add('show');
   }
 
   function grantExtraTime(color) {
+    _pendingTimeRequest = null;
+    const toast = document.getElementById('time-request-toast');
+    toast.classList.remove('show');
     if (color === 'white') timeWhite += 60;
     else timeBlack += 60;
     renderTimers();
-    _pendingTimeRequest = null;
-    // 🔧 자신이 요청한 경우 승인 불가능 (상대방만 승인 가능)
-    if (mpMode && mpColor === color) {
-      alert("You cant approve your own time request!");
-      return;
-    }
-    const toast = document.getElementById('time-request-toast');
-    toast.classList.remove('show');
     const name = document.getElementById('name-' + color).value;
     addLog(`✓ +1 minute granted to ${name}`, 'event');
     showHintToast(`+1 minute granted to ${name}!`);
-    
-    // 🔧 Multiplayer에서 상대방에게 승인 알림
-    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
-      mpSocket.send(JSON.stringify({ type: 'time_request_approved', requesterColor: color }));
-    }
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+      mpSocket.send(JSON.stringify({ type: 'time_granted', requesterColor: color }));
   }
 
   function denyExtraTime() {
@@ -1708,6 +1719,8 @@
     toast.classList.remove('show');
     addLog('✗ Extra time denied', 'event');
     showHintToast('Extra time denied.');
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+      mpSocket.send(JSON.stringify({ type: 'time_denied' }));
   }
 
   // ---- Capture notification ----
@@ -1797,17 +1810,15 @@
     }
 
     // Sync mobile bar buttons (show player names so it's clear who is who)
-    const wName = (document.getElementById('name-white') || {}).value || 'White';
-    const bName = (document.getElementById('name-black') || {}).value || 'Black';
     const wMob = document.getElementById('btn-ready-mb-white');
     if (wMob) {
-      wMob.textContent = readyWhite ? `✓ ${wName} Ready!` : `⏵ ${wName}`;
+      wMob.textContent = readyWhite ? `✓ ${wName || 'White'} Ready!` : `⏵ ${wName || 'White'}`;
       wMob.classList.toggle('is-ready', readyWhite);
       wMob.disabled = !canW;
     }
     const bMob = document.getElementById('btn-ready-mb-black');
     if (bMob) {
-      bMob.textContent = readyBlack ? `✓ ${bName} Ready!` : `⏵ ${bName}`;
+      bMob.textContent = readyBlack ? `✓ ${bName || 'Black'} Ready!` : `⏵ ${bName || 'Black'}`;
       bMob.classList.toggle('is-ready', readyBlack);
       bMob.disabled = !canB;
     }
@@ -1919,6 +1930,8 @@
     const unlimited = hintLimit === 0;
     const remaining = unlimited ? '\u221E' : Math.max(0, hintLimit - (isWhite ? hintsUsedWhite : hintsUsedBlack));
     showHintToast(`\uD83D\uDCA1 ${playerName} used a hint! (${remaining} left)`);
+    if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
+      mpSocket.send(JSON.stringify({ type: 'hint_used', color: isWhite ? 'white' : 'black' }));
     document.getElementById('hint-for-name').textContent = playerName;
     document.getElementById('hint-move-text').textContent = '...';
     document.getElementById('hint-explain').textContent = 'Stockfish is thinking... ♟';
@@ -2006,7 +2019,7 @@
         hintsUsedWhite = 0; hintsUsedBlack = 0;
         readyWhite = false; readyBlack = false;
         updateReadyButtons();
-        document.getElementById('btn-undo').disabled = true;
+        document.getElementById('btn-undo').disabled = false;
         document.getElementById('btn-surrender').disabled = false;
         document.getElementById('btn-pause').textContent = '⏸ Pause';
         document.getElementById('hint-panel').style.display = 'none';
@@ -2062,6 +2075,70 @@
         updateStatus();
       } else if (d.type === 'name') {
         document.getElementById('name-' + d.color).value = d.name;
+      } else if (d.type === 'pause') {
+        if (timerRunning) {
+          clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+          document.getElementById('btn-pause').textContent = '▶ Resume';
+          setStatus('Game paused', '');
+        }
+      } else if (d.type === 'resume') {
+        if (!timerRunning && !gameOver) { startTimer(); updateStatus(); }
+      } else if (d.type === 'undo_request') {
+        _pendingUndoRequest = true;
+        const undoToast = document.getElementById('undo-request-toast');
+        undoToast.innerHTML = `<div>↩ <strong>${d.requesterName}</strong> wants to undo the last move. Allow it?</div>
+          <div class="toast-btns">
+            <button class="btn-grant" onclick="grantUndo()">✓ Grant Undo</button>
+            <button class="btn-deny" onclick="denyUndo()">✗ Deny</button>
+          </div>`;
+        undoToast.classList.remove('show');
+        void undoToast.offsetWidth;
+        undoToast.classList.add('show');
+      } else if (d.type === 'undo_granted') {
+        _pendingUndoRequest = false;
+        const undone = game.undo();
+        if (undone) {
+          lastMove = null; selected = null; validMoves = []; hintHighlight = null;
+          document.getElementById('hint-panel').style.display = 'none';
+          renderBoard(); updateCaptures(); renderTimers(); updateStatus(); updateHintBadges();
+          const who = undone.color === 'w'
+            ? document.getElementById('name-white').value
+            : document.getElementById('name-black').value;
+          addLog(`✓ Undo granted — ${who}'s move taken back`, 'event');
+          showHintToast(`↩ ${who}'s last move was undone!`);
+        }
+      } else if (d.type === 'undo_denied') {
+        _pendingUndoRequest = false;
+        addLog('✗ Undo request denied', 'event');
+        showHintToast('Undo request denied.');
+      } else if (d.type === 'hint_used') {
+        if (d.color === 'white') hintsUsedWhite++; else hintsUsedBlack++;
+        updateHintBadges();
+        const hName = document.getElementById('name-' + d.color).value;
+        const rem = hintLimit === 0 ? '∞' : Math.max(0, hintLimit - (d.color === 'white' ? hintsUsedWhite : hintsUsedBlack));
+        showHintToast(`💡 ${hName} used a hint! (${rem} left)`);
+      } else if (d.type === 'time_request') {
+        _pendingTimeRequest = d.requesterColor;
+        const timeToast = document.getElementById('time-request-toast');
+        timeToast.innerHTML = `<div>⏱ <strong>${d.requesterName}</strong> is asking for +1 minute. Grant it?</div>
+          <div class="toast-btns">
+            <button class="btn-grant" onclick="grantExtraTime('${d.requesterColor}')">✓ Grant +1 min</button>
+            <button class="btn-deny" onclick="denyExtraTime()">✗ Deny</button>
+          </div>`;
+        timeToast.classList.remove('show');
+        void timeToast.offsetWidth;
+        timeToast.classList.add('show');
+      } else if (d.type === 'time_granted') {
+        _pendingTimeRequest = null;
+        if (d.requesterColor === 'white') timeWhite += 60; else timeBlack += 60;
+        renderTimers();
+        const tName = document.getElementById('name-' + d.requesterColor).value;
+        addLog(`✓ +1 minute granted to ${tName}`, 'event');
+        showHintToast(`+1 minute granted to ${tName}!`);
+      } else if (d.type === 'time_denied') {
+        _pendingTimeRequest = null;
+        addLog('✗ Extra time denied', 'event');
+        showHintToast('Extra time denied.');
       }
     };
 
