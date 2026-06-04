@@ -1300,7 +1300,8 @@
           const move = validMoves.find(m => m.to === sqName);
           if (move) {
             const piece = game.get(sqName);
-            sqEl.classList.add(piece ? 'valid-capture' : 'valid-move');
+            const isCapture = piece || (move.flags && move.flags.includes('e'));
+            sqEl.classList.add(isCapture ? 'valid-capture' : 'valid-move');
           }
         }
 
@@ -1341,10 +1342,10 @@
 
   // ---- Promotion dialog ----
   function showPromotionDialog(from, to) {
-    const piece = game.get(from);
-    const color = piece.color === 'w' ? 'white' : 'black';
-    const choice = prompt(`Promote to:\nQ = Queen (default)\nR = Rook\nB = Bishop\nN = Knight\n\nEnter Q, R, B, or N:`, 'Q').toUpperCase();
-    if (!choice || !['Q', 'R', 'B', 'N'].includes(choice)) return null;
+    const raw = prompt(`Promote to:\nQ = Queen (default)\nR = Rook\nB = Bishop\nN = Knight\n\nEnter Q, R, B, or N:`, 'Q');
+    if (raw === null) return null;
+    const choice = raw.trim().toUpperCase();
+    if (!['Q', 'R', 'B', 'N'].includes(choice)) return 'q';
     return choice.toLowerCase();
   }
 
@@ -1458,19 +1459,6 @@
       const wMark = readyWhite ? '✓' : '⏵';
       const bMark = readyBlack ? '✓' : '⏵';
       setStatus(`Waiting — White ${wMark}  Black ${bMark}  · click Ready to start`);
-      return;
-    }
-    // Check for insufficient material (one or both sides have only king)
-    const wpieces = Object.values(game.board()).flat().filter(p => p && p.color === 'w' && p.type !== 'k').length;
-    const bpieces = Object.values(game.board()).flat().filter(p => p && p.color === 'b' && p.type !== 'k').length;
-    if ((wpieces === 0 || bpieces === 0) && !gameOver) {
-      setStatus('½ Insufficient material — Draw!', 'game-over');
-      if (!gameOver) addLog('½ Insufficient material — Draw!', 'game');
-      gameOver = true;
-      playGameOverSound();
-      clearInterval(timerInterval);
-      document.getElementById('btn-surrender').disabled = true;
-      updateBackground();
       return;
     }
     if (game.in_checkmate()) {
