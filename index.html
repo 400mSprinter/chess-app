@@ -1250,11 +1250,9 @@
 
     const wScore = wCap.reduce((s, p) => s + (CAP_VALS[p] || 0), 0);
     const bScore = bCap.reduce((s, p) => s + (CAP_VALS[p] || 0), 0);
-    const wAdv = wScore - bScore;
-    const bAdv = bScore - wScore;
 
-    const wScoreBadge = wAdv > 0 ? `<span class="cap-score">+${wAdv}</span>` : (wScore > 0 ? `<span class="cap-score">${wScore}</span>` : '');
-    const bScoreBadge = bAdv > 0 ? `<span class="cap-score">+${bAdv}</span>` : (bScore > 0 ? `<span class="cap-score">${bScore}</span>` : '');
+    const wScoreBadge = wScore > 0 ? `<span class="cap-score">${wScore}</span>` : '';
+    const bScoreBadge = bScore > 0 ? `<span class="cap-score">${bScore}</span>` : '';
 
     document.getElementById('cap-white').innerHTML =
       wCap.map(p => `<span class="cap-b">${PIECES['b' + p.toUpperCase()]}</span>`).join('') + wScoreBadge;
