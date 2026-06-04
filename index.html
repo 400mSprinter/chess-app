@@ -148,8 +148,9 @@
       min-height: 26px;
       display: flex;
       flex-wrap: wrap;
-      gap: 2px;
-      font-size: 22px;
+      align-items: center;
+      gap: 1px;
+      font-size: 20px;
       line-height: 1.2;
     }
     .captured-pieces .cap-w {
@@ -157,7 +158,22 @@
       text-shadow: -1.5px -1.5px 0 #2d1b0e, 1.5px -1.5px 0 #2d1b0e,
                    -1.5px  1.5px 0 #2d1b0e, 1.5px  1.5px 0 #2d1b0e;
     }
-    .captured-pieces .cap-b { color: #0a0a0a; }
+    .captured-pieces .cap-b {
+      color: #1a1410;
+      text-shadow: -1.5px -1.5px 0 #c8bca8, 1.5px -1.5px 0 #c8bca8,
+                   -1.5px  1.5px 0 #c8bca8, 1.5px  1.5px 0 #c8bca8;
+    }
+    .cap-score {
+      font-size: 11px;
+      font-weight: 700;
+      color: #a3e635;
+      background: rgba(163, 230, 53, 0.12);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      align-self: center;
+      line-height: 1.6;
+    }
 
     /* Hint badge */
     .hint-badge-row {
@@ -1220,6 +1236,7 @@
   }
 
   // ---- Captured pieces ----
+  const CAP_VALS = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
   function updateCaptures() {
     const wCap = [], bCap = [];
     for (const move of game.history({ verbose: true })) {
@@ -1230,10 +1247,19 @@
     }
     wCap.sort((a, b) => PIECE_ORDER[a] - PIECE_ORDER[b]);
     bCap.sort((a, b) => PIECE_ORDER[a] - PIECE_ORDER[b]);
+
+    const wScore = wCap.reduce((s, p) => s + (CAP_VALS[p] || 0), 0);
+    const bScore = bCap.reduce((s, p) => s + (CAP_VALS[p] || 0), 0);
+    const wAdv = wScore - bScore;
+    const bAdv = bScore - wScore;
+
+    const wScoreBadge = wAdv > 0 ? `<span class="cap-score">+${wAdv}</span>` : (wScore > 0 ? `<span class="cap-score">${wScore}</span>` : '');
+    const bScoreBadge = bAdv > 0 ? `<span class="cap-score">+${bAdv}</span>` : (bScore > 0 ? `<span class="cap-score">${bScore}</span>` : '');
+
     document.getElementById('cap-white').innerHTML =
-      wCap.map(p => `<span class="cap-b">${PIECES['b' + p.toUpperCase()]}</span>`).join('');
+      wCap.map(p => `<span class="cap-b">${PIECES['b' + p.toUpperCase()]}</span>`).join('') + wScoreBadge;
     document.getElementById('cap-black').innerHTML =
-      bCap.map(p => `<span class="cap-w">${PIECES['w' + p.toUpperCase()]}</span>`).join('');
+      bCap.map(p => `<span class="cap-w">${PIECES['w' + p.toUpperCase()]}</span>`).join('') + bScoreBadge;
   }
 
   // ---- Board rendering ----
