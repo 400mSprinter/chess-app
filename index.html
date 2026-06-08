@@ -215,7 +215,6 @@
     }
 
     #board {
-      background: red !important;
       display: grid;
       grid-template-columns: repeat(8, var(--sq-size));
       grid-template-rows: repeat(8, var(--sq-size));
@@ -1564,8 +1563,7 @@
   function confirmSurrender() {
     // 🔧 Surrender 실수 방지: 확인 팝업
     if (gameOver) return;
-    const confirmed = confirm("정말로 포기하시겠습니까?
-This action cannot be undone!");
+    const confirmed = confirm("정말로 포기하시겠습니까? This action cannot be undone!");
     if (confirmed) {
       surrender();
     }
