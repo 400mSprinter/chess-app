@@ -927,7 +927,7 @@
       <button class="btn-outline" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
       <button class="btn-outline" id="btn-undo" onclick="undoMove()">↩ Undo</button>
       <button class="btn-hint" id="btn-hint" onclick="requestHint()">💡 Hint</button>
-      <button class="btn-surrender" id="btn-surrender" onclick="surrender()">🏳 Surrender</button>
+      <button class="btn-surrender" id="btn-surrender" onclick="confirmSurrender()">🏳 Surrender</button>
       <button class="btn-flip" id="btn-flip" onclick="flipBoard()">🔄 Flip</button>
       <button class="btn-outline" id="btn-mp" onclick="toggleMpPanel()">🌐 Multi</button>
       <div class="game-config">
@@ -1554,6 +1554,16 @@
   }
 
   // ---- Surrender ----
+  function confirmSurrender() {
+    // 🔧 Surrender 실수 방지: 확인 팝업
+    if (gameOver) return;
+    const confirmed = confirm("정말로 포기하시겠습니까?
+This action cannot be undone!");
+    if (confirmed) {
+      surrender();
+    }
+  }
+
   function surrender() {
     if (gameOver) return;
     const loser  = game.turn() === 'w'
