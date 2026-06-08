@@ -1,4 +1,4 @@
-﻿<!-- Created: 2026-03-11 14:00 -->
+<!-- Created: 2026-03-11 14:00 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1098,6 +1098,37 @@
   // Piece names for notifications
   const PNAME_MAP = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
 
+  // ---- Shared helpers ----
+  // Player-name lookup. playerName() takes 'white'|'black'; nameOf() takes a
+  // chess colour 'w'|'b' (e.g. piece.color / move.color / game.turn()).
+  function playerName(color) { return document.getElementById('name-' + color).value; }
+  function nameOf(c) { return playerName(c === 'w' ? 'white' : 'black'); }
+  // Name of the side whose turn it is, and of its opponent.
+  function turnName() { return nameOf(game.turn()); }
+  function oppName()  { return nameOf(game.turn() === 'w' ? 'b' : 'w'); }
+
+  // Repaint every dynamic part of the UI after a state change
+  function refreshAll() {
+    renderBoard();
+    updateCaptures();
+    renderTimers();   // also calls updateBackground()
+    updateStatus();
+    updateHintBadges();
+  }
+
+  // One reusable transient-toast driver (replaces 4 near-identical copies)
+  const _toastTimers = {};
+  function showToast(id, html, duration = 2500) {
+    const toast = document.getElementById(id);
+    if (!toast) return;
+    toast.innerHTML = html;
+    if (_toastTimers[id]) clearTimeout(_toastTimers[id]);
+    toast.classList.remove('show');
+    void toast.offsetWidth; // force reflow so the CSS transition restarts
+    toast.classList.add('show');
+    _toastTimers[id] = setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
   // ---- Init ----
   function newGame() {
     if (mpMode) {
@@ -1225,12 +1256,8 @@
     clearInterval(timerInterval);
     timerRunning = false;
     gameOver = true;
-    const winner = color === 'w'
-      ? document.getElementById('name-black').value
-      : document.getElementById('name-white').value;
-    const loser = color === 'w'
-      ? document.getElementById('name-white').value
-      : document.getElementById('name-black').value;
+    const winner = nameOf(color === 'w' ? 'b' : 'w');
+    const loser = nameOf(color);
     playGameOverSound();
     setStatus(`⏰ Time's up! ${winner} wins on time!`, 'game-over');
     addLog(`⏰ Time's up! ${winner} wins on time!`, 'game');
@@ -1238,15 +1265,10 @@
     updateBackground();
   }
 
-  let _timeoutToastTimer = null;
   function showTimeoutToast(winner, loser) {
-    const toast = document.getElementById('timeout-toast');
-    toast.innerHTML = `⏰ Time's up!<br><span style="font-size:0.75em;color:var(--text)">${loser}'s time ran out</span><br><span style="font-size:0.9em">${winner} wins! 🏆</span>`;
-    if (_timeoutToastTimer) clearTimeout(_timeoutToastTimer);
-    toast.classList.remove('show');
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    _timeoutToastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
+    showToast('timeout-toast',
+      `⏰ Time's up!<br><span style="font-size:0.75em;color:var(--text)">${loser}'s time ran out</span><br><span style="font-size:0.9em">${winner} wins! 🏆</span>`,
+      5000);
   }
 
   function renderTimers() {
@@ -1437,12 +1459,8 @@
           playMoveSound(!!result.captured);
           // Show capture notification
           if (result.captured && movingPiece) {
-            const attackerName = movingPiece.color === 'w'
-              ? document.getElementById('name-white').value
-              : document.getElementById('name-black').value;
-            const victimName = movingPiece.color === 'w'
-              ? document.getElementById('name-black').value
-              : document.getElementById('name-white').value;
+            const attackerName = nameOf(movingPiece.color);
+            const victimName = nameOf(movingPiece.color === 'w' ? 'b' : 'w');
             const capPieceName = PNAME_MAP[result.captured] || result.captured;
             const atkPieceName = PNAME_MAP[movingPiece.type] || movingPiece.type;
             showCaptureToast(victimName, capPieceName, attackerName, atkPieceName);
@@ -1453,9 +1471,7 @@
           hintHighlight = null;
           document.getElementById('hint-panel').style.display = 'none';
           { // log the move
-            const moverName = result.color === 'w'
-              ? document.getElementById('name-white').value
-              : document.getElementById('name-black').value;
+            const moverName = nameOf(result.color);
             let logMsg = `♟ ${moverName}: ${result.san}`;
             if (result.captured) logMsg += ` ✕${PNAME_MAP[result.captured]||result.captured}`;
             addLog(logMsg, 'move');
@@ -1509,9 +1525,7 @@
       return;
     }
     if (game.in_checkmate()) {
-      const winner = game.turn() === 'w'
-        ? document.getElementById('name-black').value
-        : document.getElementById('name-white').value;
+      const winner = oppName();
       setStatus(`♛ Checkmate! ${winner} wins!`, 'game-over');
       if (!gameOver) addLog(`🏆 Checkmate! ${winner} wins!`, 'game');
       gameOver = true;
@@ -1537,17 +1551,12 @@
       document.getElementById('btn-surrender').disabled = true;
       updateBackground();
     } else if (game.in_check()) {
-      const who = game.turn() === 'w'
-        ? document.getElementById('name-white').value
-        : document.getElementById('name-black').value;
+      const who = turnName();
       playCheckSound();
       showCheckToast(who);
       setStatus(`⚠ Check! ${who}'s move`, 'check');
     } else {
-      const who = game.turn() === 'w'
-        ? document.getElementById('name-white').value
-        : document.getElementById('name-black').value;
-      setStatus(`${game.turn() === 'w' ? '□' : '■'} ${who}'s turn`);
+      setStatus(`${game.turn() === 'w' ? '□' : '■'} ${turnName()}'s turn`);
     }
   }
 
@@ -1569,12 +1578,8 @@
 
   function surrender() {
     if (gameOver) return;
-    const loser  = game.turn() === 'w'
-      ? document.getElementById('name-white').value
-      : document.getElementById('name-black').value;
-    const winner = game.turn() === 'w'
-      ? document.getElementById('name-black').value
-      : document.getElementById('name-white').value;
+    const loser  = turnName();
+    const winner = oppName();
     gameOver = true;
     clearInterval(timerInterval);
     timerRunning = false;
@@ -1595,7 +1600,7 @@
 
     const requesterColor = game.turn() === 'w' ? 'black' : 'white';
     if (mpMode && requesterColor !== mpColor) return;
-    const requesterName = document.getElementById('name-' + requesterColor).value;
+    const requesterName = playerName(requesterColor);
 
     _pendingUndoRequest = true;
     addLog(`↩ ${requesterName} requested an undo`, 'event');
@@ -1638,9 +1643,7 @@
     updateStatus();
     updateHintBadges();
 
-    const who = undone.color === 'w'
-      ? document.getElementById('name-white').value
-      : document.getElementById('name-black').value;
+    const who = nameOf(undone.color);
     addLog(`\u2713 Undo granted — ${who}'s move taken back`, 'event');
     showHintToast(`\u21A9 ${who}'s last move was undone!`);
   }
@@ -1745,7 +1748,7 @@
   let _pendingTimeRequest = null;
   function askExtraTime(requesterColor) {
     if (gameOver || _pendingTimeRequest) return;
-    const requesterName = document.getElementById('name-' + requesterColor).value;
+    const requesterName = playerName(requesterColor);
 
     _pendingTimeRequest = requesterColor;
     addLog(`⏱ ${requesterName} asked for +1 minute`, 'event');
@@ -1774,7 +1777,7 @@
     if (color === 'white') timeWhite += 60;
     else timeBlack += 60;
     renderTimers();
-    const name = document.getElementById('name-' + color).value;
+    const name = playerName(color);
     addLog(`✓ +1 minute granted to ${name}`, 'event');
     showHintToast(`+1 minute granted to ${name}!`);
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
@@ -1792,39 +1795,19 @@
   }
 
   // ---- Capture notification ----
-  let _captureToastTimer = null;
   function showCaptureToast(victimName, capPieceName, attackerName, atkPieceName) {
-    const toast = document.getElementById('capture-toast');
-    toast.innerHTML = `<span class="toast-icon">\u2694</span>${attackerName}'s ${atkPieceName} captured ${victimName}'s ${capPieceName}!`;
-    if (_captureToastTimer) clearTimeout(_captureToastTimer);
-    toast.classList.remove('show');
-    void toast.offsetWidth; // force reflow for transition restart
-    toast.classList.add('show');
-    _captureToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    showToast('capture-toast',
+      `<span class="toast-icon">\u2694</span>${attackerName}'s ${atkPieceName} captured ${victimName}'s ${capPieceName}!`);
   }
 
   // ---- Check notification ----
-  let _checkToastTimer = null;
-  function showCheckToast(playerName) {
-    const toast = document.getElementById('check-toast');
-    toast.textContent = `\u26A0 ${playerName} is in Check!`;
-    if (_checkToastTimer) clearTimeout(_checkToastTimer);
-    toast.classList.remove('show');
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    _checkToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  function showCheckToast(name) {
+    showToast('check-toast', `\u26A0 ${name} is in Check!`);
   }
 
   // ---- Hint notification ----
-  let _hintToastTimer = null;
   function showHintToast(msg) {
-    const toast = document.getElementById('hint-toast');
-    toast.textContent = msg;
-    if (_hintToastTimer) clearTimeout(_hintToastTimer);
-    toast.classList.remove('show');
-    void toast.offsetWidth; // force reflow for transition restart
-    toast.classList.add('show');
-    _hintToastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    showToast('hint-toast', msg);
   }
 
   // ---- Prevent accidental refresh ----
@@ -1838,9 +1821,8 @@
   // ---- Ready / Start ----
   function toggleReady(color) {
     // 🔧 이름이 입력되지 않으면 Ready 불가능
-    const nameInput = document.getElementById('name-' + color);
-    const playerName = (nameInput?.value || '').trim();
-    if (!playerName) {
+    const enteredName = (document.getElementById('name-' + color)?.value || '').trim();
+    if (!enteredName) {
       alert('Please enter your name before clicking Ready!');
       return;
     }
@@ -1849,7 +1831,7 @@
     if (color === 'white') readyWhite = true;
     else readyBlack = true;
     updateReadyButtons();
-    const rName = document.getElementById('name-' + color).value || color;
+    const rName = enteredName || color;
     addLog(`✓ ${rName} is ready`, 'event');
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
       mpSocket.send(JSON.stringify({ type: 'ready', color }));
@@ -1900,10 +1882,10 @@
     let color, name;
     if (mpMode) {
       color = mpColor;
-      name = document.getElementById('name-' + mpColor).value;
+      name = playerName(mpColor);
     } else {
       color = game.turn() === 'w' ? 'white' : 'black';
-      name = document.getElementById('name-' + color).value;
+      name = playerName(color);
     }
     input.value = '';
     addChatMessage(color, name, msg);
@@ -1945,7 +1927,7 @@
   // ---- Name sync ----
   function onNameChange(color) {
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN) {
-      const name = document.getElementById('name-' + color).value;
+      const name = playerName(color);
       mpSocket.send(JSON.stringify({ type: 'name', color, name }));
     }
     updateReadyButtons(); // keep mobile bar labels in sync
@@ -1991,16 +1973,14 @@
     updateHintBadges();
 
     // Notify the opponent that a hint was used
-    const playerName = isWhite
-      ? document.getElementById('name-white').value
-      : document.getElementById('name-black').value;
-    addLog(`💡 ${playerName} used a hint`, 'event');
+    const hintPlayer = nameOf(isWhite ? 'w' : 'b');
+    addLog(`💡 ${hintPlayer} used a hint`, 'event');
     const unlimited = hintLimit === 0;
     const remaining = unlimited ? '\u221E' : Math.max(0, hintLimit - (isWhite ? hintsUsedWhite : hintsUsedBlack));
-    showHintToast(`\uD83D\uDCA1 ${playerName} used a hint! (${remaining} left)`);
+    showHintToast(`\uD83D\uDCA1 ${hintPlayer} used a hint! (${remaining} left)`);
     if (mpMode && mpSocket && mpSocket.readyState === WebSocket.OPEN)
       mpSocket.send(JSON.stringify({ type: 'hint_used', color: isWhite ? 'white' : 'black' }));
-    document.getElementById('hint-for-name').textContent = playerName;
+    document.getElementById('hint-for-name').textContent = hintPlayer;
     document.getElementById('hint-move-text').textContent = '...';
     document.getElementById('hint-explain').textContent = 'Stockfish is thinking... ♟';
     document.getElementById('hint-panel').style.display = 'block';
@@ -2092,7 +2072,7 @@
         document.getElementById('btn-pause').textContent = '⏸ Pause';
         document.getElementById('hint-panel').style.display = 'none';
         if (d.fen) { game.load(d.fen); if (d.last_move) lastMove = d.last_move; }
-        renderBoard(); updateCaptures(); renderTimers(); updateStatus(); updateHintBadges(); updateBackground();
+        refreshAll();
         const opp = d.opponent_online;
         setMpStatus(opp
           ? `✓ Opponent connected! You play ${mpColor}`
@@ -2108,25 +2088,19 @@
           if (!gameStarted) { gameStarted = true; document.body.classList.add('game-started'); lockSettings(); updateExtraTimeButtons(); }
           playMoveSound(!!r.captured);
           if (r.captured && movingPiece) {
-            const atkName = movingPiece.color === 'w'
-              ? document.getElementById('name-white').value
-              : document.getElementById('name-black').value;
-            const vicName = movingPiece.color === 'w'
-              ? document.getElementById('name-black').value
-              : document.getElementById('name-white').value;
+            const atkName = nameOf(movingPiece.color);
+            const vicName = nameOf(movingPiece.color === 'w' ? 'b' : 'w');
             showCaptureToast(vicName, PNAME_MAP[r.captured] || r.captured, atkName, PNAME_MAP[movingPiece.type] || movingPiece.type);
           }
           lastMove = { from: d.move.from, to: d.move.to };
-          { const mName = r.color === 'w'
-              ? document.getElementById('name-white').value
-              : document.getElementById('name-black').value;
+          { const mName = nameOf(r.color);
             let lm = `♟ ${mName}: ${r.san}`;
             if (r.captured) lm += ` ✕${PNAME_MAP[r.captured]||r.captured}`;
             addLog(lm, 'move'); }
           if (d.timeWhite !== undefined) timeWhite = d.timeWhite;
           if (d.timeBlack !== undefined) timeBlack = d.timeBlack;
           if (!timerRunning && !gameOver) startTimer();
-          renderBoard(); updateCaptures(); renderTimers(); updateStatus(); updateHintBadges();
+          refreshAll();
         }
 
       } else if (d.type === 'opponent_left') {
@@ -2168,10 +2142,8 @@
         if (undone) {
           lastMove = null; selected = null; validMoves = []; hintHighlight = null;
           document.getElementById('hint-panel').style.display = 'none';
-          renderBoard(); updateCaptures(); renderTimers(); updateStatus(); updateHintBadges();
-          const who = undone.color === 'w'
-            ? document.getElementById('name-white').value
-            : document.getElementById('name-black').value;
+          refreshAll();
+          const who = nameOf(undone.color);
           addLog(`✓ Undo granted — ${who}'s move taken back`, 'event');
           showHintToast(`↩ ${who}'s last move was undone!`);
         }
@@ -2182,7 +2154,7 @@
       } else if (d.type === 'hint_used') {
         if (d.color === 'white') hintsUsedWhite++; else hintsUsedBlack++;
         updateHintBadges();
-        const hName = document.getElementById('name-' + d.color).value;
+        const hName = playerName(d.color);
         const rem = hintLimit === 0 ? '∞' : Math.max(0, hintLimit - (d.color === 'white' ? hintsUsedWhite : hintsUsedBlack));
         showHintToast(`💡 ${hName} used a hint! (${rem} left)`);
       } else if (d.type === 'time_request') {
@@ -2200,7 +2172,7 @@
         _pendingTimeRequest = null;
         if (d.requesterColor === 'white') timeWhite += 60; else timeBlack += 60;
         renderTimers();
-        const tName = document.getElementById('name-' + d.requesterColor).value;
+        const tName = playerName(d.requesterColor);
         addLog(`✓ +1 minute granted to ${tName}`, 'event');
         showHintToast(`+1 minute granted to ${tName}!`);
       } else if (d.type === 'time_denied') {
