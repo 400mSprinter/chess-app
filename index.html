@@ -639,7 +639,9 @@
     .game-config.locked select { opacity: 0.4; pointer-events: none; }
 
     @media (max-width: 1100px) {
-      .board-wrap { order: -1; }
+      .board-wrap { order: 0; }
+      #panel-black { order: 1; }
+      #panel-white { order: 2; }
     }
 
     /* ── Tablet (iPad): 600 – 1100px ── */
@@ -656,6 +658,10 @@
       h1 { font-size: 16px; margin-bottom: 8px; }
 
       /* Stack everything in one column */
+      /* Ensure player panels are stacked below board: Black then White */
+      .board-wrap { order: 0; }
+      #panel-black { order: 1; }
+      #panel-white { order: 2; }
       .game-wrap {
         flex-direction: column;
         gap: 6px;
