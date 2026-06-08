@@ -639,9 +639,10 @@
     .game-config.locked select { opacity: 0.4; pointer-events: none; }
 
     @media (max-width: 1100px) {
-      .board-wrap { order: 0; }
+      /* Player panels sit side-by-side ABOVE the board */
       #panel-black { order: 1; }
       #panel-white { order: 2; }
+      .board-wrap { order: 3; }
     }
 
     /* ── Tablet (iPad): 600 – 1100px ── */
@@ -657,40 +658,37 @@
 
       h1 { font-size: 16px; margin-bottom: 8px; }
 
-      /* Stack everything in one column */
-      /* Ensure player panels are stacked below board: Black then White */
-      .board-wrap { order: 0; }
+      /* Two player panels side-by-side, directly above the board */
       #panel-black { order: 1; }
       #panel-white { order: 2; }
+      .board-wrap { order: 3; }
       .game-wrap {
-        flex-direction: column;
+        flex-flow: row wrap;
+        align-items: flex-start;
         gap: 6px;
         width: 100%;
       }
 
-      /* Player panels → compact horizontal strips */
+      /* Player panels → compact vertical cards, 50% width each */
       .player-panel {
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
+        width: calc(50% - 3px);
+        flex-direction: column;
+        align-items: stretch;
         padding: 8px 10px;
-        gap: 6px 10px;
+        gap: 6px;
         border-radius: 8px;
       }
-      .player-label { display: none; }
+      .player-label { display: block; font-size: 10px; }
       .player-name-input {
-        width: auto;
-        min-width: 65px;
-        max-width: 90px;
+        width: 100%;
+        max-width: none;
         font-size: 13px;
         padding: 4px 8px;
-        flex-shrink: 0;
       }
       .timer {
         font-size: 22px;
         padding: 4px 10px;
-        flex-shrink: 0;
+        text-align: center;
       }
       /* Timer config too cramped on mobile — hide it */
       .player-timer-config { display: none; }
